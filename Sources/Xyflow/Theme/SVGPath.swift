@@ -148,8 +148,8 @@ public enum SVGPath {
 
         private mutating func execute(_ command: Unicode.Scalar, path: CGMutablePath) -> Bool {
             let relative = command.value >= 97
-            let offsetX = relative ? current.x : 0
-            let offsetY = relative ? current.y : 0
+            let offsetX: Double = relative ? Double(current.x) : 0
+            let offsetY: Double = relative ? Double(current.y) : 0
 
             switch command {
             case "M", "m":
@@ -167,13 +167,13 @@ public enum SVGPath {
                 lastQuadControl = nil
             case "H", "h":
                 guard let x = readNumber() else { return false }
-                current = CGPoint(x: offsetX + x, y: current.y)
+                current = CGPoint(x: offsetX + x, y: Double(current.y))
                 path.addLine(to: current)
                 lastCubicControl = nil
                 lastQuadControl = nil
             case "V", "v":
                 guard let y = readNumber() else { return false }
-                current = CGPoint(x: current.x, y: offsetY + y)
+                current = CGPoint(x: Double(current.x), y: offsetY + y)
                 path.addLine(to: current)
                 lastCubicControl = nil
                 lastQuadControl = nil

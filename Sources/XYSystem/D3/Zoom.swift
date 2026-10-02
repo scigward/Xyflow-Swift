@@ -617,8 +617,9 @@ public final class D3ZoomBehavior {
             g.touch1 = nil
         }
 
-        if g.touch0 != nil {
-            g.touch0?.l = transform.invert(g.touch0!.p)
+        if var touch = g.touch0 {
+            touch.l = transform.invert(touch.p)
+            g.touch0 = touch
         } else {
             _ = g.end()
 
@@ -678,8 +679,14 @@ final class ZoomGesture {
     func zoom(_ key: String?, _ transform: ZoomTransform) -> ZoomGesture {
         if let mouse, key != "mouse" { self.mouse = (mouse.p, transform.invert(mouse.p)) }
         if key != "touch" {
-            if touch0 != nil { touch0?.l = transform.invert(touch0!.p) }
-            if touch1 != nil { touch1?.l = transform.invert(touch1!.p) }
+            if var touch = touch0 {
+                touch.l = transform.invert(touch.p)
+                touch0 = touch
+            }
+            if var touch = touch1 {
+                touch.l = transform.invert(touch.p)
+                touch1 = touch
+            }
         }
         behavior.storeTransform(transform)
         behavior.emit("zoom", sourceEvent)
