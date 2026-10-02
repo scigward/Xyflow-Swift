@@ -1,0 +1,47 @@
+import XCTest
+@testable import XYSystem
+
+/// Expected values are what `String(number)` of JavaScript gives.
+final class NumberFormatTests: XCTestCase {
+    func testFormatNumber() {
+        XCTAssertEqual(formatNumber(0), "0")
+        XCTAssertEqual(formatNumber(1), "1")
+        XCTAssertEqual(formatNumber(-1), "-1")
+        XCTAssertEqual(formatNumber(1.5), "1.5")
+        XCTAssertEqual(formatNumber(0.30000000000000004), "0.30000000000000004")
+        XCTAssertEqual(formatNumber(100), "100")
+        XCTAssertEqual(formatNumber(100000000000000000000), "100000000000000000000")
+        XCTAssertEqual(formatNumber(1e+21), "1e+21")
+        XCTAssertEqual(formatNumber(123456789012345680000), "123456789012345680000")
+        XCTAssertEqual(formatNumber(0.000001), "0.000001")
+        XCTAssertEqual(formatNumber(1e-7), "1e-7")
+        XCTAssertEqual(formatNumber(1.5e-7), "1.5e-7")
+        XCTAssertEqual(formatNumber(1.23e-18), "1.23e-18")
+        XCTAssertEqual(formatNumber(-1e-7), "-1e-7")
+        XCTAssertEqual(formatNumber(0.000001234), "0.000001234")
+        XCTAssertEqual(formatNumber(5e-324), "5e-324")
+        XCTAssertEqual(formatNumber(1.7976931348623157e+308), "1.7976931348623157e+308")
+        XCTAssertEqual(formatNumber(2.5), "2.5")
+        XCTAssertEqual(formatNumber(0.3333333333333333), "0.3333333333333333")
+        XCTAssertEqual(formatNumber(33.333333333333336), "33.333333333333336")
+        XCTAssertEqual(formatNumber(12345.6789), "12345.6789")
+        XCTAssertEqual(formatNumber(0.1), "0.1")
+        XCTAssertEqual(formatNumber(0.5), "0.5")
+        XCTAssertEqual(formatNumber(1234567890123), "1234567890123")
+        XCTAssertEqual(formatNumber(4.35), "4.35")
+        XCTAssertEqual(formatNumber(4.349999999999999), "4.349999999999999")
+        XCTAssertEqual(formatNumber(105), "105")
+        XCTAssertEqual(formatNumber(105.5), "105.5")
+        XCTAssertEqual(formatNumber(1000000000000000), "1000000000000000")
+        XCTAssertEqual(formatNumber(10000000000000000), "10000000000000000")
+        XCTAssertEqual(formatNumber(123456789.12345679), "123456789.12345679")
+        XCTAssertEqual(formatNumber(0.30000000000000004), "0.30000000000000004")
+        XCTAssertEqual(formatNumber(8.5), "8.5")
+        XCTAssertEqual(formatNumber(12.5), "12.5")
+        XCTAssertEqual(formatNumber(0.8999999999999999), "0.8999999999999999")
+        XCTAssertEqual(formatNumber(-0.0), "0")
+        XCTAssertEqual(formatNumber(.infinity), "Infinity")
+        XCTAssertEqual(formatNumber(-.infinity), "-Infinity")
+        XCTAssertEqual(formatNumber(.nan), "NaN")
+    }
+}
