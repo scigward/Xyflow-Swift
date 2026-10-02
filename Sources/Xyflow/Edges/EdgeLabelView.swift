@@ -26,7 +26,14 @@ public final class EdgeLabelView: UIView, FlowClickable {
 
     /// Puts the label with its text at the point of the flow it is on the middle of. The style is the
     /// `labelStyle` of the edge, which sits on top of the style of the flow.
-    public func update(text: String, x: Double, y: Double, style: String?, scope: FlowStyleScope) {
+    public func update(
+        text: String,
+        x: Double,
+        y: Double,
+        style: String?,
+        scope: FlowStyleScope,
+        font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) }
+    ) {
         let labelScope = FlowStyleScope(parent: scope, style: style)
         let inline = FlowCSS.declarationMap(style)
 
@@ -52,7 +59,7 @@ public final class EdgeLabelView: UIView, FlowClickable {
             }
         }()
 
-        textLabel.font = .systemFont(ofSize: CGFloat(fontSize), weight: weight)
+        textLabel.font = font(CGFloat(fontSize), weight)
         textLabel.text = text
         textLabel.textColor = (color ?? labelScope.inheritedColor()).map { $0.uiColor } ?? .label
         backgroundColor = background?.uiColor ?? .clear

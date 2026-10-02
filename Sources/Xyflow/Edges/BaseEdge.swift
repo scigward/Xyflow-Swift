@@ -234,7 +234,13 @@ public final class BaseEdge {
         let edgeId = props.id
         let select = context.selectEdge
         view.onSelect = { select(edgeId) }
-        view.update(text: text, x: labelX ?? 0, y: labelY ?? 0, style: props.labelStyle, scope: context.styleScope)
+        view.update(
+            text: text,
+            x: labelX ?? 0,
+            y: labelY ?? 0,
+            style: props.labelStyle,
+            scope: context.styleScope,
+            font: context.font)
     }
 
     // MARK: Hit testing

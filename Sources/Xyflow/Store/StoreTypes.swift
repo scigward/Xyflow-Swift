@@ -130,19 +130,23 @@ public struct EdgeRenderContext {
     public var theme: ColorModeClass
     /// Selects the edge with the id the way a click on it does (`useHandleEdgeSelect`).
     public var selectEdge: (String) -> Void
+    /// The font of the text of the flow, for a size and a weight.
+    public var font: (CGFloat, UIFont.Weight) -> UIFont
 
     public init(
         styleScope: FlowStyleScope,
         markers: [MarkerProps],
         flowId: String?,
         theme: ColorModeClass,
-        selectEdge: @escaping (String) -> Void = { _ in }
+        selectEdge: @escaping (String) -> Void = { _ in },
+        font: @escaping (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) }
     ) {
         self.styleScope = styleScope
         self.markers = markers
         self.flowId = flowId
         self.theme = theme
         self.selectEdge = selectEdge
+        self.font = font
     }
 }
 

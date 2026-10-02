@@ -290,12 +290,10 @@ public final class ControlButton: UIControl {
         }
 
         if let contentView {
+            // bounds and center, so the content can be rotated
             let size = contentView.sizeThatFits(inner.size)
-            contentView.frame = CGRect(
-                x: inner.minX + (inner.width - size.width) / 2,
-                y: inner.minY + (inner.height - size.height) / 2,
-                width: size.width,
-                height: size.height)
+            contentView.bounds = CGRect(origin: .zero, size: size)
+            contentView.center = CGPoint(x: inner.midX, y: inner.midY)
         }
 
         CATransaction.begin()

@@ -113,6 +113,7 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     /// What the edges read their style from.
     var styleScope: () -> FlowStyleScope = { FlowStyleScope(properties: FlowTheme.light) }
     var colorModeClass: () -> ColorModeClass = { .light }
+    var font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) }
 
     var onEdgeClick: ((EdgeEvent) -> Void)?
     var onEdgeContextMenu: ((EdgeEvent) -> Void)?
@@ -183,7 +184,8 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
             markers: store.markers.get(),
             flowId: store.flowId.get(),
             theme: colorModeClass(),
-            selectEdge: { [weak store] id in store?.handleEdgeSelect(id) })
+            selectEdge: { [weak store] id in store?.handleEdgeSelect(id) },
+            font: font)
 
         var next: [EdgeWrapper] = []
         var seen = Set<String>()

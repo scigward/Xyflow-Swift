@@ -359,6 +359,14 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         didSet { invalidateTheme() }
     }
 
+    /// The font of the text the flow draws itself, such as the labels of edges: it is given a size and a weight.
+    public var fontProvider: ((CGFloat, UIFont.Weight) -> UIFont)? {
+        didSet {
+            edgeRenderer.font = fontProvider ?? { UIFont.systemFont(ofSize: $0, weight: $1) }
+            edgeRenderer.reconcile()
+        }
+    }
+
     private var cachedScope: FlowStyleScope?
 
     // MARK: Init
