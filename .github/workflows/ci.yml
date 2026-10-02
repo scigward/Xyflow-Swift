@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  system:
+    name: XYSystem
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test
+        run: |
+          set -o pipefail
+          swift test --filter XYSystemTests 2>&1 | tee build.log
+
+      - name: Errors 1-10
+        if: always()
+        run: sh scripts/annotate.sh build.log 0
+      - name: Errors 11-20
+        if: always()
+        run: sh scripts/annotate.sh build.log 10
+      - name: Errors 21-30
+        if: always()
+        run: sh scripts/annotate.sh build.log 20
+      - name: Errors 31-40
+        if: always()
+        run: sh scripts/annotate.sh build.log 30
+      - name: Errors 41-50
+        if: always()
+        run: sh scripts/annotate.sh build.log 40
+
+  ios:
+    name: Xyflow (iOS)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -scheme Xyflow \
+            -destination 'generic/platform=iOS Simulator' \
+            2>&1 | tee build.log
+
+      - name: Errors 1-10
+        if: always()
+        run: sh scripts/annotate.sh build.log 0
+      - name: Errors 11-20
+        if: always()
+        run: sh scripts/annotate.sh build.log 10
+      - name: Errors 21-30
+        if: always()
+        run: sh scripts/annotate.sh build.log 20
+      - name: Errors 31-40
+        if: always()
+        run: sh scripts/annotate.sh build.log 30
+      - name: Errors 41-50
+        if: always()
+        run: sh scripts/annotate.sh build.log 40
+
+      - name: Test
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -scheme Xyflow-Package \
+            -destination 'platform=iOS Simulator,name=iPhone 15' \
+            2>&1 | tee test.log
+
+      - name: Failures 1-10
+        if: always()
+        run: sh scripts/annotate.sh test.log 0
+      - name: Failures 11-20
+        if: always()
+        run: sh scripts/annotate.sh test.log 10
