@@ -125,10 +125,10 @@ final class GraphGoldenTests: XCTestCase {
     func test_parentsAndSelection() {
         let nodes = [
             Node(id: "p", position: XYPosition(x: 100, y: 100), measured: Measured(width: 300, height: 200)),
-            Node(id: "c1", position: XYPosition(x: 10, y: 20), measured: Measured(width: 50, height: 30), parentId: "p"),
-            Node(id: "c2", position: XYPosition(x: 120, y: 60), measured: Measured(width: 50, height: 30), parentId: "p", selected: true),
-            Node(id: "free", position: XYPosition(x: 500, y: 20), measured: Measured(width: 40, height: 40), zIndex: 3),
-            Node(id: "hidden", position: XYPosition(x: 0, y: 0), measured: Measured(width: 10, height: 10), hidden: true)
+            Node(id: "c1", position: XYPosition(x: 10, y: 20), parentId: "p", measured: Measured(width: 50, height: 30)),
+            Node(id: "c2", position: XYPosition(x: 120, y: 60), selected: true, parentId: "p", measured: Measured(width: 50, height: 30)),
+            Node(id: "free", position: XYPosition(x: 500, y: 20), zIndex: 3, measured: Measured(width: 40, height: 40)),
+            Node(id: "hidden", position: XYPosition(x: 0, y: 0), hidden: true, measured: Measured(width: 10, height: 10))
         ]
         let edges = [
             Edge(id: "e1", source: "c1", target: "c2"),

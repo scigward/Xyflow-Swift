@@ -1,4 +1,5 @@
 #if canImport(UIKit)
+import UIKit
 import XCTest
 import XYSystem
 @testable import Xyflow
