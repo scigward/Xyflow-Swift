@@ -27,9 +27,17 @@ public enum SVGPath {
 
         // MARK: Scanning
 
+        private func isSeparator(_ scalar: Unicode.Scalar) -> Bool {
+            switch scalar {
+            case " ", ",", "\n", "\t", "\r":
+                return true
+            default:
+                return false
+            }
+        }
+
         private mutating func skipSeparators() {
-            while index < scalars.count, scalars[index] == " " || scalars[index] == "," || scalars[index] == "\n"
-                    || scalars[index] == "\t" || scalars[index] == "\r" {
+            while index < scalars.count, isSeparator(scalars[index]) {
                 index += 1
             }
         }

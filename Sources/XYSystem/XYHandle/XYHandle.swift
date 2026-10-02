@@ -144,10 +144,9 @@ public enum XYHandle {
         var closestHandle: Handle?
 
         let clickedHandle = doc.handleElement(atX: event.clientX, y: event.clientY)
-        let handleType = getHandleType(params.edgeUpdaterType, clickedHandle)
-        let containerBounds = params.domNode?.boundingClientRect
 
-        guard let containerBounds, let handleType else {
+        guard let handleType = getHandleType(params.edgeUpdaterType, clickedHandle),
+              let containerBounds = params.domNode?.boundingClientRect else {
             return
         }
 
@@ -326,13 +325,12 @@ private func isValidHandle(_ event: FlowPointerEvent, _ params: IsValidParams) -
     var result = HandleValidationResult(handleDomNode: handleToCheck, isValid: false, connection: nil, toHandle: nil)
 
     if let handleToCheck {
-        let handleType = getHandleType(nil, handleToCheck)
-        let handleNodeId = handleToCheck.handleNodeId
         let handleId = handleToCheck.handleId
         let connectable = handleToCheck.handleIsConnectable
         let connectableEnd = handleToCheck.handleIsConnectableEnd
 
-        guard let handleNodeId, !handleNodeId.isEmpty, let handleType else {
+        guard let handleNodeId = handleToCheck.handleNodeId, !handleNodeId.isEmpty,
+              let handleType = getHandleType(nil, handleToCheck) else {
             return result
         }
 

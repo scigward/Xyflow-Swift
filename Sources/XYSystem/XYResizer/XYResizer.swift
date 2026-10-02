@@ -131,6 +131,7 @@ public final class XYResizer {
     }
 
     public func update(_ updateParams: XYResizerUpdateParams) {
+        let params = self.params
         let nodeId = params.nodeId
         let getStoreItems = params.getStoreItems
         let boundaries = updateParams.boundaries
@@ -335,10 +336,10 @@ public final class XYResizer {
             }
 
             updateParams.onResize?(event, nextValues)
-            self.params.onChange(change, childChanges)
+            params.onChange(change, childChanges)
         }
 
-        behavior.listeners.on("end") { [self] event in
+        behavior.listeners.on("end") { event in
             updateParams.onResizeEnd?(event, prevValues)
             params.onEnd?(prevValues)
         }

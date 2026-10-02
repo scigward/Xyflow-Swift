@@ -62,6 +62,9 @@ public final class XYMinimap {
     }
 
     public func update(_ params: XYMinimapUpdate) {
+        let panZoom = self.panZoom
+        let getTransform = self.getTransform
+        let getViewScale = self.getViewScale
         let zoomStep = params.zoomStep ?? 10
         let pannable = params.pannable ?? true
         let zoomable = params.zoomable ?? true
@@ -70,7 +73,7 @@ public final class XYMinimap {
         let width = params.width
         let height = params.height
 
-        let zoomHandler: (ZoomEvent) -> Void = { [self] event in
+        let zoomHandler: (ZoomEvent) -> Void = { event in
             let transform = getTransform()
 
             guard let sourceEvent = event.sourceEvent, sourceEvent.type == "wheel" else {
@@ -94,7 +97,7 @@ public final class XYMinimap {
             }
         }
 
-        let panHandler: (ZoomEvent) -> Void = { [self] event in
+        let panHandler: (ZoomEvent) -> Void = { event in
             let transform = getTransform()
 
             guard let sourceEvent = event.sourceEvent,

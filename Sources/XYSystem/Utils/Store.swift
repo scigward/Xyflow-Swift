@@ -337,7 +337,7 @@ public func handleExpandParent(
     }
 
     if parentExpansions.count > 0 {
-        parentExpansions.forEach { expansion, parentId in
+        parentExpansions.forEachEntry { expansion, parentId in
             let expandedRect = expansion.expandedRect
             let parent = expansion.parent
 
@@ -366,7 +366,7 @@ public func handleExpandParent(
 
                 // We move all child nodes in the opposite direction
                 // so the x,y changes of the parent do not move the children
-                parentLookup.get(parentId)?.forEach { childNode, _ in
+                parentLookup.get(parentId)?.forEachEntry { childNode, _ in
                     if !children.contains(where: { $0.id == childNode.id }) {
                         changes.append(.position(NodePositionChange(
                             id: childNode.id,

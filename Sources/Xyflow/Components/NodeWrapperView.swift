@@ -420,7 +420,7 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
             lastLayoutKey = key
         }
 
-        frame = CGRect(x: position.x, y: position.y, width: size.width, height: size.height)
+        frame = CGRect(x: CGFloat(position.x), y: CGFloat(position.y), width: size.width, height: size.height)
 
         if let contentView {
             contentView.frame = CGRect(

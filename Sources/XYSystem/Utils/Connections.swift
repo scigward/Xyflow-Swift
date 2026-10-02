@@ -37,7 +37,7 @@ public func handleConnectionChange(
 
     var diff: [HandleConnection] = []
 
-    a.forEach { connection, key in
+    a.forEachEntry { connection, key in
         if !b.has(key) {
             diff.append(connection)
         }

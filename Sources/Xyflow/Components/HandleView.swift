@@ -349,14 +349,14 @@ public final class HandleView: UIView, HandleElement, FlowPointerDownHandling {
                         nodeId: startParams.nodeId, handleId: startParams.handleId, handleType: startParams.handleType))
                 },
                 onConnect: { connection in
-                    let edge: EdgeOrConnection?
+                    let created: EdgeOrConnection?
                     if let create = store.onedgecreate.get() {
-                        edge = create(connection)
+                        created = create(connection)
                     } else {
-                        edge = .connection(connection)
+                        created = .connection(connection)
                     }
 
-                    guard let edge else { return }
+                    guard let edge = created else { return }
 
                     store.addEdge(edge)
                     store.onconnect.get()?(connection)

@@ -142,7 +142,7 @@ public func getInternalNodesBounds<NodeType: AbsolutelyPositioned>(
 
     var box = Box(x: .infinity, y: .infinity, x2: -.infinity, y2: -.infinity)
 
-    nodeLookup.forEach { node, _ in
+    nodeLookup.forEachEntry { node, _ in
         if filter == nil || filter?(node) == true {
             box = getBoundsOfBoxes(box, nodeToBox(node))
         }
@@ -212,7 +212,7 @@ func getFitViewNodes(_ nodeLookup: NodeLookup, options: FitViewOptions?) -> Node
     let fitViewNodes = NodeLookup()
     let optionNodeIds: Set<String>? = options?.nodes.map { Set($0.map { $0.id }) }
 
-    nodeLookup.forEach { node, _ in
+    nodeLookup.forEachEntry { node, _ in
         let isVisible = (node.measured.width ?? 0) != 0
             && (node.measured.height ?? 0) != 0
             && (options?.includeHiddenNodes == true || node.hidden != true)

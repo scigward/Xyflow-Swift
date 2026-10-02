@@ -1,5 +1,6 @@
 #if canImport(UIKit)
 import UIKit
+import UIKit.UIGestureRecognizerSubclass
 import XYSystem
 
 /// Takes the touches and the pointer of the flow to where the events of the interface go. A press goes

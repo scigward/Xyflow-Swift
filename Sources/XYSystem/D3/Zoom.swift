@@ -169,7 +169,7 @@ public final class D3ZoomBehavior {
     public private(set) var translateExtent: CoordinateExtent = .infinite
     /// How long the transition of a double click takes, in milliseconds.
     public var duration: Double = 250
-    public var interpolate: (ZoomView, ZoomView) -> ZoomInterpolator = { interpolateZoom($0, $1) }
+    public var interpolate: (ZoomRegion, ZoomRegion) -> ZoomInterpolator = { interpolateZoom($0, $1) }
     public let listeners = D3Dispatch<ZoomEvent>(["start", "zoom", "end"])
     public var tapDistance: Double = 10
 

@@ -85,10 +85,10 @@ final class UserSelectionView: SelectionRectView {
 
         // the rectangle is the size of the content, the border is around it
         frame = CGRect(
-            x: rect.x,
-            y: rect.y,
-            width: rect.width + borderExtra,
-            height: rect.height + borderExtra)
+            x: CGFloat(rect.x),
+            y: CGFloat(rect.y),
+            width: CGFloat(rect.width) + borderExtra,
+            height: CGFloat(rect.height) + borderExtra)
         isHidden = false
     }
 }
@@ -165,8 +165,8 @@ final class NodeSelectionView: UIView, FlowElement, FlowDragHost, FlowClickable,
         rectView.frame = CGRect(
             x: 0,
             y: 0,
-            width: bounds.width + rectView.borderExtra,
-            height: bounds.height + rectView.borderExtra)
+            width: CGFloat(bounds.width) + rectView.borderExtra,
+            height: CGFloat(bounds.height) + rectView.borderExtra)
         isHidden = false
     }
 

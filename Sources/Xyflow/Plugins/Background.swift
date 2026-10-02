@@ -132,9 +132,9 @@ public final class BackgroundView: FlowPluginView {
         let originY = viewport.y.truncatingRemainder(dividingBy: gapY)
 
         let firstColumn = Int((-originX / gapX).rounded(.up))
-        let lastColumn = Int(((bounds.width - originX) / gapX).rounded(.down))
+        let lastColumn = Int(((Double(bounds.width) - originX) / gapX).rounded(.down))
         let firstRow = Int((-originY / gapY).rounded(.up))
-        let lastRow = Int(((bounds.height - originY) / gapY).rounded(.down))
+        let lastRow = Int(((Double(bounds.height) - originY) / gapY).rounded(.down))
 
         let columns = max(0, lastColumn - firstColumn + 1)
         let rows = max(0, lastRow - firstRow + 1)
@@ -163,14 +163,14 @@ public final class BackgroundView: FlowPluginView {
 
             for column in firstColumn...lastColumn {
                 let x = originX + Double(column) * gapX
-                context.move(to: CGPoint(x: x, y: bounds.minY))
-                context.addLine(to: CGPoint(x: x, y: bounds.maxY))
+                context.move(to: CGPoint(x: CGFloat(x), y: bounds.minY))
+                context.addLine(to: CGPoint(x: CGFloat(x), y: bounds.maxY))
             }
 
             for row in firstRow...lastRow {
                 let y = originY + Double(row) * gapY
-                context.move(to: CGPoint(x: bounds.minX, y: y))
-                context.addLine(to: CGPoint(x: bounds.maxX, y: y))
+                context.move(to: CGPoint(x: bounds.minX, y: CGFloat(y)))
+                context.addLine(to: CGPoint(x: bounds.maxX, y: CGFloat(y)))
             }
 
             context.strokePath()

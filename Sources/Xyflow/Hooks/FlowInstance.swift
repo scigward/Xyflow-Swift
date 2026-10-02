@@ -157,17 +157,17 @@ public final class FlowInstance {
     private func nodeRect(_ nodeOrRect: NodeOrRect) -> Rect? {
         let lookup = store.nodeLookup.get()
 
-        let node: Node?
+        let found: Node?
         switch nodeOrRect {
         case .rect(let rect):
             return rect
         case .node(let value):
-            node = value
+            found = value
         case .id(let id):
-            node = lookup.get(id)?.internals.userNode
+            found = lookup.get(id)?.internals.userNode
         }
 
-        guard let node else { return nil }
+        guard let node = found else { return nil }
 
         let position: XYPosition
         if let parentId = node.parentId {

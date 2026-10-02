@@ -44,19 +44,19 @@ public func getEdgePosition(_ params: GetEdgePositionParams) -> EdgePosition? {
     let sourceHandleBounds = sourceNode.internals.handleBounds ?? toHandleBounds(sourceNode.handles, nodeId: sourceNode.id)
     let targetHandleBounds = targetNode.internals.handleBounds ?? toHandleBounds(targetNode.handles, nodeId: targetNode.id)
 
-    let sourceHandle = getHandle(sourceHandleBounds?.source ?? [], params.sourceHandle)
-    let targetHandle = getHandle(
+    let foundSource = getHandle(sourceHandleBounds?.source ?? [], params.sourceHandle)
+    let foundTarget = getHandle(
         // when connection type is loose we can define all handles as sources and connect source -> source
         params.connectionMode == .strict
             ? targetHandleBounds?.target ?? []
             : (targetHandleBounds?.target ?? []) + (targetHandleBounds?.source ?? []),
         params.targetHandle)
 
-    guard let sourceHandle, let targetHandle else {
+    guard let sourceHandle = foundSource, let targetHandle = foundTarget else {
         params.onError?(
             "008",
             ErrorMessages.error008(
-                sourceHandle == nil ? .source : .target,
+                foundSource == nil ? .source : .target,
                 id: params.id,
                 sourceHandle: params.sourceHandle,
                 targetHandle: params.targetHandle))

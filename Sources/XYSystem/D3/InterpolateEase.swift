@@ -19,26 +19,26 @@ private func d3Tanh(_ value: Double) -> Double {
 
 /// The view `[ux, uy, w]` a zoom is at: the center of the view in the coordinates of the content
 /// and the width that is visible of it.
-public typealias ZoomView = (ux: Double, uy: Double, w: Double)
+public typealias ZoomRegion = (ux: Double, uy: Double, w: Double)
 
 /// An interpolator between two views, with how long the transition takes at this `rho`.
 public struct ZoomInterpolator {
     public var duration: Double
-    private let function: (Double) -> ZoomView
+    private let function: (Double) -> ZoomRegion
 
-    init(duration: Double, function: @escaping (Double) -> ZoomView) {
+    init(duration: Double, function: @escaping (Double) -> ZoomRegion) {
         self.duration = duration
         self.function = function
     }
 
-    public func callAsFunction(_ t: Double) -> ZoomView {
+    public func callAsFunction(_ t: Double) -> ZoomRegion {
         function(t)
     }
 }
 
 /// Smooth zooming and panning along the optimal path of van Wijk and Nuij,
 /// "Smooth and efficient zooming and panning" (`d3.interpolateZoom`).
-public func interpolateZoom(_ p0: ZoomView, _ p1: ZoomView, rho: Double = 2.0.squareRoot()) -> ZoomInterpolator {
+public func interpolateZoom(_ p0: ZoomRegion, _ p1: ZoomRegion, rho: Double = 2.0.squareRoot()) -> ZoomInterpolator {
     let rho = max(1e-3, rho)
     let rho2 = rho * rho
     let rho4 = rho2 * rho2
@@ -50,7 +50,7 @@ public func interpolateZoom(_ p0: ZoomView, _ p1: ZoomView, rho: Double = 2.0.sq
     let d2 = dx * dx + dy * dy
 
     let S: Double
-    let function: (Double) -> ZoomView
+    let function: (Double) -> ZoomRegion
 
     // Special case for u0 ≅ u1.
     if d2 < epsilon2 {

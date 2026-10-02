@@ -65,7 +65,7 @@ public final class OrderedMap<Key: Hashable, Value>: Sequence {
         }
     }
 
-    public func forEach(_ body: (Value, Key) -> Void) {
+    public func forEachEntry(_ body: (Value, Key) -> Void) {
         for key in order {
             if let value = storage[key] {
                 body(value, key)
