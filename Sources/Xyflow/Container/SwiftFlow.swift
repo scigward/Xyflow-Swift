@@ -912,7 +912,7 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         edgeRenderer.flowHover(event: event, phase: recognizer.state)
     }
 
-    public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         if let pinch = gestureRecognizer as? UIPinchGestureRecognizer {
             // a pinch of fingers is the business of the touches, only the one of a trackpad is a wheel
             return pinch.numberOfTouches == 0 && zoomView.wouldHandleWheel(at: pinch.location(in: nil), ctrlKey: true, in: self)
