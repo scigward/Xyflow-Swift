@@ -12,7 +12,7 @@ It is split in two libraries:
 | `XYSystem` | Foundation only. Types, geometry, edge paths, the pan/zoom, drag, handle, minimap and resizer controllers, and the d3 behaviors (zoom, drag, transition, interpolation) they sit on. |
 | `Xyflow`   | UIKit. The `SwiftFlow` view, the store, the built in nodes and edges, hooks and the plugins (background, controls, minimap, node resizer, node toolbar). |
 
-Requires iOS 16 or later. `XYSystem` also builds on macOS.
+Requires iOS 16 or later. `XYSystem` also builds on macOS and Linux.
 
 ## Installation
 
@@ -125,12 +125,12 @@ button asks for a context menu, and the keys of `selectionKey`, `multiSelectionK
 
 ## Tests
 
-`swift test --filter XYSystemTests` runs the tests of the core. Many of their expected values are not written
-by hand: they were produced by running the same inputs through the original `@xyflow/system` and
-`d3` packages. The tests of the UIKit part run on the iOS simulator:
+`swift test --filter XYSystemTests` runs the tests of the core, on macOS and on Linux. Most of their expected
+values are not written by hand: they were produced by running the same inputs, many of them random, through the
+original `@xyflow/system` and `d3` packages. The tests of the UIKit part run on the iOS simulator:
 
 ```
-xcodebuild test -scheme Xyflow-Package -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild test -scheme Xyflow-Package -destination 'platform=iOS Simulator,name=<a simulator you have>'
 ```
 
 ## License
