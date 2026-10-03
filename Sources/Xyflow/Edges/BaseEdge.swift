@@ -2,6 +2,20 @@
 import UIKit
 import XYSystem
 
+/// A presentation animation can be discarded while its edge's cached props stay unchanged.
+private final class EdgeAnimationDelegate: NSObject, CAAnimationDelegate {
+    private let onStop: () -> Void
+
+    init(onStop: @escaping () -> Void) {
+        self.onStop = onStop
+        super.init()
+    }
+
+    func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
+        onStop()
+    }
+}
+
 /// What every edge is made of: the path, the markers at its ends, the invisible path around it that
 /// makes it easy to hit, and its label. The edge types that ship with the flow, and custom edges,
 /// draw themselves with it.
@@ -25,6 +39,15 @@ public final class BaseEdge {
     private var hitWidth: Double = 20
     private var strokeWidth: Double = 1
     private var markerKey: String?
+    private var animatesDashes = false
+    private lazy var dashAnimationDelegate = EdgeAnimationDelegate { [weak self] in
+        // Core Animation delivers this for cancellation too. Defer until hierarchy changes finish;
+        // never restart a removed/offscreen edge or an edge whose animation was explicitly disabled.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isOnScreen else { return }
+            self.restoreAnimations()
+        }
+    }
 
     public init() {
         pathLayer.fillColor = nil
@@ -116,22 +139,37 @@ public final class BaseEdge {
 
         pathLayer.lineDashPhase = CGFloat(inline["stroke-dashoffset"].flatMap { FlowCSS.parseLength($0) } ?? 0)
 
-        if props.animated && dashes != nil {
-            if pathLayer.animation(forKey: "dashdraw") == nil {
-                let animation = CABasicAnimation(keyPath: "lineDashPhase")
-                animation.fromValue = 10
-                animation.toValue = 0
-                animation.duration = 0.5
-                animation.repeatCount = .infinity
-                animation.timingFunction = CAMediaTimingFunction(name: .linear)
-                // the dashes of every edge on screen are drawn again with each frame, and 30 of them a
-                // second move them smoothly enough
-                animation.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
-                pathLayer.add(animation, forKey: "dashdraw")
-            }
+        animatesDashes = props.animated && dashes != nil
+        if animatesDashes {
+            restoreAnimations()
         } else {
             pathLayer.removeAnimation(forKey: "dashdraw")
         }
+    }
+
+    /// Geometry caching must not freeze animated edges. Keep the web's infinite, linear 0.5s
+    /// dash animation independent of prop updates, and let the display choose its refresh rate.
+    public func restoreAnimations() {
+        guard animatesDashes, pathLayer.animation(forKey: "dashdraw") == nil else { return }
+        let animation = CABasicAnimation(keyPath: "lineDashPhase")
+        animation.fromValue = 10
+        animation.toValue = 0
+        animation.duration = 0.5
+        animation.repeatCount = .infinity
+        animation.timingFunction = CAMediaTimingFunction(name: .linear)
+        animation.delegate = dashAnimationDelegate
+        pathLayer.add(animation, forKey: "dashdraw")
+    }
+
+    private var isOnScreen: Bool {
+        var current: CALayer? = pathLayer
+        var hasWindow = false
+        while let ancestor = current {
+            if ancestor.isHidden { return false }
+            if let view = ancestor.delegate as? UIView, view.window != nil { hasWindow = true }
+            current = ancestor.superlayer
+        }
+        return hasWindow
     }
 
     // MARK: Markers

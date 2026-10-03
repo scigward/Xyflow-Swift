@@ -55,7 +55,7 @@ Add the package in Xcode (File > Add Package Dependencies) with the URL of this 
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/scigward/Xyflow-Swift.git", from: "1.0.0")
+    .package(url: "https://github.com/scigward/Xyflow-Swift.git", from: "1.0.1")
 ],
 targets: [
     .target(

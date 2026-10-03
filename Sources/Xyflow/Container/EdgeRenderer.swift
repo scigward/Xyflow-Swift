@@ -357,6 +357,12 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
             }
         }
 
+        // Layers may have lost their animations while culled, reordered or removed from a window.
+        // Restore them after attachment even when EdgeSignature correctly skips geometry updates.
+        for wrapper in next where !wrapper.isHidden {
+            wrapper.component?.restoreAnimations()
+        }
+
         // the edge that is drawn last is on top, which is the one a touch finds first
         hitOrder = next.enumerated()
             .sorted { first, second in

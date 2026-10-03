@@ -26,6 +26,10 @@ open class PathEdgeComponent: FlowEdgeComponent {
         base.contains(point: point)
     }
 
+    public func restoreAnimations() {
+        base.restoreAnimations()
+    }
+
     /// The path of the edge with the props it is given.
     open func path(for props: EdgeProps) -> EdgePathResult {
         fatalError("PathEdgeComponent.path(for:) has to be overridden")

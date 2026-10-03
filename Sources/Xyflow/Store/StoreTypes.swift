@@ -118,8 +118,15 @@ public protocol FlowEdgeComponent: AnyObject {
     /// The labels of the edge, in the coordinates of the flow.
     var labelViews: [UIView] { get }
     func update(props: EdgeProps, context: EdgeRenderContext)
+    /// Restores presentation animations after reattachment, even when cached props have not changed.
+    func restoreAnimations()
     /// Whether a point of the flow is on the edge, which is what a click on it hits.
     func contains(point: CGPoint) -> Bool
+}
+
+extension FlowEdgeComponent {
+    /// Custom components without presentation animations need no lifecycle work.
+    public func restoreAnimations() {}
 }
 
 /// What an edge needs of the flow it is drawn in.
