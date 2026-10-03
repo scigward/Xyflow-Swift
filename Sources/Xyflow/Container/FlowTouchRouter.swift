@@ -25,6 +25,7 @@ final class FlowTouchRouter: UIGestureRecognizer, UIGestureRecognizerDelegate {
         var dragHost: FlowDragHost?
         var ownsPane = false
         var ownsZoom = false
+        var suppressClick = false
 
         init(id: Int, isPointer: Bool, button: Int, client: CGPoint, target: UIView?) {
             self.id = id
@@ -167,6 +168,14 @@ final class FlowTouchRouter: UIGestureRecognizer, UIGestureRecognizerDelegate {
         return nil
     }
 
+    /// Drag-disabled nodes leave the press to the views around them, like `useDrag` on the web.
+    func dragHost(for target: UIView?) -> FlowDragHost? {
+        guard let host = ancestor(of: target, as: FlowDragHost.self), host.flowDragEnabled else {
+            return nil
+        }
+        return host
+    }
+
     // MARK: Touches
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -186,6 +195,13 @@ final class FlowTouchRouter: UIGestureRecognizer, UIGestureRecognizerDelegate {
                 client: touch.location(in: nil),
                 target: view)
             tracks[ObjectIdentifier(touch)] = track
+
+            // Pinching is not a click, even when one finger barely moves. Keep this
+            // latched until each finger ends so lifting them separately cannot open a node.
+            let fingers = tracks.values.filter { !$0.isPointer }
+            if fingers.count > 1 {
+                fingers.forEach { $0.suppressClick = true }
+            }
 
             routeDown(track, event)
         }
@@ -218,7 +234,7 @@ final class FlowTouchRouter: UIGestureRecognizer, UIGestureRecognizerDelegate {
 
         // a node, or the selection of nodes, is dragged: when the filter of the drag lets the press
         // through, the views around the node do not get it
-        if let host = ancestor(of: target, as: FlowDragHost.self) {
+        if let host = dragHost(for: target) {
             let started = host.flowDragBehavior.pointerDown(
                 pointerEvent,
                 point: flow.zoomPoint(for: pointerEvent),
@@ -336,6 +352,8 @@ final class FlowTouchRouter: UIGestureRecognizer, UIGestureRecognizerDelegate {
 
     /// A press that is let go of without moving much is a click on the view it started on.
     private func deliverClick(_ track: Track, _ event: FlowPointerEvent) {
+        guard !track.suppressClick else { return }
+
         let dx = track.lastClient.x - track.startClient.x
         let dy = track.lastClient.y - track.startClient.y
         let distance = (dx * dx + dy * dy).squareRoot()

@@ -88,7 +88,19 @@ final class NodeRenderer: FlowPassthroughView {
     // MARK: Touches
 
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        guard let hit = super.hitTest(point, with: event) else { return nil }
+        guard !isHidden, alpha > 0.01, isUserInteractionEnabled else { return nil }
+
+        // Edge labels share this host with nodes. UIKit's default hit test follows subview order,
+        // not layer zPosition, so choose the frontmost hit without sorting on every touch.
+        var frontHit: UIView?
+        var frontZ = -CGFloat.infinity
+        for subview in subviews.reversed() where subview.layer.zPosition > frontZ {
+            if let hit = subview.hitTest(convert(point, to: subview), with: event) {
+                frontHit = hit
+                frontZ = subview.layer.zPosition
+            }
+        }
+        guard let hit = frontHit else { return nil }
 
         // an edge with a z index above the one of the node is in front of it
         if let edgeZ = edgeZIndexAt?(point),
@@ -163,7 +175,7 @@ final class NodeRenderer: FlowPassthroughView {
             }
             .map { $0.element }
 
-        let current = subviews
+        let current = subviews.compactMap { $0 as? NodeWrapperView }
         let inOrder = current.count == stacked.count && zip(current, stacked).allSatisfy { $0 === $1 }
         if !inOrder {
             for wrapper in stacked {

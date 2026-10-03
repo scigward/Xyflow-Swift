@@ -430,7 +430,8 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         let renderer = NodeRenderer(store: store)
         nodeRenderer = renderer
         // the edges are drawn among the nodes, by their z index
-        edgeRenderer = EdgeRenderer(store: store, labelHost: labelRenderer, layerHost: renderer.layer)
+        edgeRenderer = EdgeRenderer(store: store, labelHost: labelRenderer,
+                                    layerHost: renderer.layer, labelViewHost: renderer)
         connectionLineView = ConnectionLineView(store: store)
         keyHandler = KeyHandler(store: store)
 

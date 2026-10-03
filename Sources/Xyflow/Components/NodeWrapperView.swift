@@ -333,6 +333,8 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
             nodeClickDistance: nodeClickDistance))
     }
 
+    var flowDragEnabled: Bool { isDraggable }
+
     var flowDragBehavior: D3DragBehavior {
         xyDrag.behavior
     }

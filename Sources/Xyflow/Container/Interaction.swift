@@ -4,7 +4,13 @@ import XYSystem
 
 /// A view the drag of a node, or of a selection of nodes, starts on.
 protocol FlowDragHost: AnyObject {
+    /// A non-draggable node must leave its touches to the canvas pan and zoom.
+    var flowDragEnabled: Bool { get }
     var flowDragBehavior: D3DragBehavior { get }
+}
+
+extension FlowDragHost {
+    var flowDragEnabled: Bool { true }
 }
 
 /// A view that is clicked (tapped), or a pointer goes down on.

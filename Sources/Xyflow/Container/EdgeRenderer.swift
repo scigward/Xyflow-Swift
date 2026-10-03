@@ -188,8 +188,12 @@ final class EdgeWrapper {
 final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, FlowContextMenuHandling {
     let store: SwiftFlowStore
 
-    /// Where the labels of the edges go.
+    /// The label renderer supplies the same stylesheet ancestors as the web portal.
     private weak var labelHost: UIView?
+
+    /// The labels are composited beside the paths and nodes when they share a layer host. Keeping
+    /// them in a lower sibling renderer would let the edge paths draw over their backgrounds.
+    private weak var labelViewHost: UIView?
 
     /// The layer the layers of the edges are put in, below the ones of the nodes. It is the layer of the
     /// node renderer, which makes the `zIndex` of an edge count against the ones of the nodes the way it
@@ -231,10 +235,11 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     private var lastFlowId: String?
     private var lastTheme: ColorModeClass?
 
-    init(store: SwiftFlowStore, labelHost: UIView, layerHost: CALayer? = nil) {
+    init(store: SwiftFlowStore, labelHost: UIView, layerHost: CALayer? = nil, labelViewHost: UIView? = nil) {
         self.store = store
         self.labelHost = labelHost
         self.layerHost = layerHost
+        self.labelViewHost = labelViewHost ?? labelHost
         super.init(frame: .zero)
 
         flowClasses = ["svelte-flow__edges"]
@@ -386,14 +391,20 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     }
 
     private func syncLabels() {
-        guard let labelHost else { return }
+        guard let labelViewHost else { return }
 
         var wanted: [ObjectIdentifier: UIView] = [:]
         for wrapper in ordered {
             for view in wrapper.labelViews {
                 wanted[ObjectIdentifier(view)] = view
-                if view.superview !== labelHost {
-                    labelHost.addSubview(view)
+                // The label belongs to the edge at every z index, not to a lower portal layer.
+                view.layer.zPosition = wrapper.layer.zPosition
+                if view.superview !== labelViewHost {
+                    if let firstNode = labelViewHost.subviews.first(where: { $0 is NodeWrapperView }) {
+                        labelViewHost.insertSubview(view, belowSubview: firstNode)
+                    } else {
+                        labelViewHost.addSubview(view)
+                    }
                 }
             }
         }
