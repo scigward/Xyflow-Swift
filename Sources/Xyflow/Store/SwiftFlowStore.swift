@@ -519,10 +519,11 @@ public final class SwiftFlowStore {
 
     public func addSelectedNodes(_ ids: [String]) {
         let isMultiSelection = multiselectionKeyPressed.get()
+        let selectedIds = Set(ids)
 
         nodes.update { ns in
             ns.map { node in
-                let nodeWillBeSelected = ids.contains(node.id)
+                let nodeWillBeSelected = selectedIds.contains(node.id)
                 let selected = isMultiSelection
                     ? (node.selected == true || nodeWillBeSelected)
                     : nodeWillBeSelected
@@ -546,10 +547,11 @@ public final class SwiftFlowStore {
 
     public func addSelectedEdges(_ ids: [String]) {
         let isMultiSelection = multiselectionKeyPressed.get()
+        let selectedIds = Set(ids)
 
         edges.update { eds in
             eds.map { edge in
-                let edgeWillBeSelected = ids.contains(edge.id)
+                let edgeWillBeSelected = selectedIds.contains(edge.id)
                 let selected = isMultiSelection
                     ? (edge.selected == true || edgeWillBeSelected)
                     : edgeWillBeSelected

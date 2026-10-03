@@ -55,7 +55,7 @@ Add the package in Xcode (File > Add Package Dependencies) with the URL of this 
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/scigward/Xyflow-Swift.git", from: "1.0.1")
+    .package(url: "https://github.com/scigward/Xyflow-Swift.git", from: "1.0.2")
 ],
 targets: [
     .target(
@@ -313,8 +313,8 @@ flow.add(controls)
 - A viewport change that the user cuts short (by touching the flow during a `fitView`, say) answers `false` to
   `await`, where the promise of the web version stays open.
 - Stylesheets read a part of CSS, see [Styles](#styles).
-- An edge is drawn in front of the nodes with a lower `zIndex` than its own, and behind the others. Its label is
-  always behind the nodes.
+- An edge and its label are drawn in front of the nodes with a lower `zIndex` than their own, and behind the
+  others. At the default `zIndex`, both stay behind the nodes.
 - Key events come from GameController when the flow does not have the focus, so only a hardware keyboard sends
   them, and the modifier keys that are held are the ones of that keyboard.
 
@@ -329,7 +329,14 @@ what to set for a graph of a few hundred nodes. What the flow does to stay fast 
   the style of the flow or its stylesheet.
 - The views of nodes and edges that left the screen are kept for when they come back.
 - The pattern of the background is drawn once and moved, and is drawn again for another zoom.
-- The paths of the edges are not animated, and the dashes of animated edges move at 30 frames a second.
+- Changes to edge geometry are not implicitly animated. Animated dashes follow the web's half-second linear
+  loop, without an artificial frame-rate cap, and resume when a cached edge returns to the layer tree.
+- Selection and deletion use local ID sets for membership checks, while preserving traversal order, object
+  semantics and store notifications.
+- Edge styles are parsed once per update. The stroked hit-test path is reused until its geometry or effective
+  width changes.
+- Nodes and edges that already arrive in stacking order use a linear pass instead of sorting, preserving
+  source-order ties and checking the current mutable z values on every reconciliation.
 
 ## Layout of the repository
 

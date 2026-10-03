@@ -121,8 +121,9 @@ final class ConnectionLineView: FlowPassthroughView {
 
     /// `.svelte-flow__connection-path`, under the `style` of the line.
     private func applyStyle() {
-        let scope = FlowStyleScope(parent: styleScope(), style: style)
+        let parentScope = styleScope()
         let inline = FlowCSS.declarationMap(style)
+        let scope = FlowStyleScope(parent: parentScope, properties: inline)
 
         var stroke = scope.color(["--xy-connectionline-stroke", "--xy-connectionline-stroke-default"])
         if let declared = inline["stroke"] {

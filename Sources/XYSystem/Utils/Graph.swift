@@ -175,11 +175,9 @@ public func getNodesInside(
             continue
         }
 
-        let width = node.measured.width ?? node.width ?? node.initialWidth
-        let height = node.measured.height ?? node.height ?? node.initialHeight
-
-        let overlappingArea = getOverlappingArea(paneRect, nodeToRect(node))
-        let area = (width ?? 0) * (height ?? 0)
+        let nodeRect = nodeToRect(node)
+        let overlappingArea = getOverlappingArea(paneRect, nodeRect)
+        let area = nodeRect.width * nodeRect.height
 
         let partiallyVisible = partially && overlappingArea > 0
         let forceInitialRender = node.internals.handleBounds == nil
@@ -322,6 +320,7 @@ public func getElementsToRemove(
 ) {
     let nodeIds = Set(nodesToRemove)
     var matchingNodes: [Node] = []
+    var matchingNodeIds = Set<String>()
 
     for node in nodes {
         if node.deletable == false {
@@ -329,24 +328,31 @@ public func getElementsToRemove(
         }
 
         let isIncluded = nodeIds.contains(node.id)
-        let parentHit = !isIncluded && node.parentId != nil
-            && matchingNodes.contains { $0.id == node.parentId }
+        let parentHit = !isIncluded && (node.parentId.map { matchingNodeIds.contains($0) } == true)
 
         if isIncluded || parentHit {
             matchingNodes.append(node)
+            matchingNodeIds.insert(node.id)
         }
     }
 
     let edgeIds = Set(edgesToRemove)
     let deletableEdges = edges.filter { $0.deletable != false }
-    let connectedEdges = getConnectedEdges(matchingNodes, deletableEdges)
+    let connectedEdges = deletableEdges.filter {
+        matchingNodeIds.contains($0.source) || matchingNodeIds.contains($0.target)
+    }
     var matchingEdges: [Edge] = connectedEdges
 
-    for edge in deletableEdges {
-        let isIncluded = edgeIds.contains(edge.id)
+    if !edgeIds.isEmpty {
+        var matchingEdgeIds = Set<String>()
+        for edge in connectedEdges {
+            matchingEdgeIds.insert(edge.id)
+        }
 
-        if isIncluded && !matchingEdges.contains(where: { $0.id == edge.id }) {
-            matchingEdges.append(edge)
+        for edge in deletableEdges where edgeIds.contains(edge.id) {
+            if matchingEdgeIds.insert(edge.id).inserted {
+                matchingEdges.append(edge)
+            }
         }
     }
 

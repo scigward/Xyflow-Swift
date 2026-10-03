@@ -62,8 +62,8 @@ public final class BaseEdge {
         props: EdgeProps,
         context: EdgeRenderContext
     ) {
-        let scope = FlowStyleScope(parent: context.styleScope, style: props.style)
         let inline = FlowCSS.declarationMap(props.style)
+        let scope = FlowStyleScope(parent: context.styleScope, properties: inline)
 
         if path != currentPath {
             currentPath = path
@@ -74,10 +74,15 @@ public final class BaseEdge {
             markerKey = nil
         }
 
+        let previousHitWidth = max(hitWidth, strokeWidth)
         updateStroke(props: props, scope: scope, inline: inline)
 
         hitWidth = props.interactionWidth ?? 20
-        hitPath = nil
+        // A color, label or data update does not change the stroked geometry used for hit testing.
+        // Path changes invalidate it above; widths only do so when the effective hit width changes.
+        if max(hitWidth, strokeWidth) != previousHitWidth {
+            hitPath = nil
+        }
 
         updateMarkers(props: props, context: context)
         updateLabel(props: props, labelX: labelX, labelY: labelY, context: context)

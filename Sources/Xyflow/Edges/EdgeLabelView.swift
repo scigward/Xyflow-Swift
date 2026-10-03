@@ -13,7 +13,8 @@ public final class EdgeLabelView: UIView, FlowClickable {
     public override init(frame: CGRect) {
         super.init(frame: frame)
 
-        flowClasses = ["svelte-flow__edge-label", FlowClass.noDrag, FlowClass.noPan]
+        // EdgeLabel.svelte 0.1.39 keeps labels clickable but does not suppress canvas gestures.
+        flowClasses = ["svelte-flow__edge-label"]
         textLabel.font = .systemFont(ofSize: 10)
         textLabel.textAlignment = .center
         textLabel.numberOfLines = 0
@@ -34,8 +35,8 @@ public final class EdgeLabelView: UIView, FlowClickable {
         scope: FlowStyleScope,
         font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) }
     ) {
-        let labelScope = FlowStyleScope(parent: scope, style: style)
         let inline = FlowCSS.declarationMap(style)
+        let labelScope = FlowStyleScope(parent: scope, properties: inline)
 
         var color = labelScope.color(["--xy-edge-label-color", "--xy-edge-label-color-default"])
         if let declared = labelScope.resolvedColor(inline["color"]) {

@@ -75,5 +75,81 @@ final class FlowTouchRoutingTests: XCTestCase {
         flow.nodes.set([fixedNode])
         XCTAssertNil(router.dragHost(for: wrapper))
     }
+
+    private func makeLabeledFlow() -> SwiftFlow {
+        let flow = SwiftFlow(nodes: [
+            Node(id: "a", position: .zero, data: ["label": "Anime"]),
+            Node(id: "b", position: XYPosition(x: 300, y: 100), data: ["label": "Sequel"])
+        ], edges: [Edge(id: "relation", source: "a", target: "b", label: "SEQUEL")])
+        flow.nodesDraggable = false
+        flow.frame = window.bounds
+        window.addSubview(flow)
+        flow.layoutIfNeeded()
+        let deadline = Date().addingTimeInterval(3)
+        while !flow.nodeRenderer.subviews.contains(where: { $0 is EdgeLabelView }) && Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        }
+        return flow
+    }
+
+    private func label(in flow: SwiftFlow) throws -> EdgeLabelView {
+        try XCTUnwrap(flow.nodeRenderer.subviews.compactMap { $0 as? EdgeLabelView }.first)
+    }
+
+    /// A second finger must join the zoom regardless of which kind of view it lands on first.
+    func testPinchAcrossLabelsAndNodesWorksInBothFingerArrivalOrders() throws {
+        for order in 0..<3 {
+            let flow = makeLabeledFlow()
+            let label = try label(in: flow)
+            let node = try XCTUnwrap(flow.nodeRenderer.wrapper(for: "a"))
+            let firstTarget: UIView = order == 1 ? node : label
+            let secondTarget: UIView = order == 0 ? node : label
+            let zoom = try XCTUnwrap(flow.zoomView.zoomBehavior)
+            let first = ZoomTouch(identifier: 1, point: XYPosition(x: 30, y: 30))
+            let second = ZoomTouch(identifier: 2, point: XYPosition(x: 90, y: 30))
+            zoom.touchstarted(ZoomSourceEvent(type: "touchstart", target: firstTarget,
+                                             touches: [first], changedTouches: [first]))
+            zoom.touchstarted(ZoomSourceEvent(type: "touchstart", target: secondTarget,
+                                             touches: [first, second], changedTouches: [second]))
+            let moved = ZoomTouch(identifier: 2, point: XYPosition(x: 150, y: 30))
+            zoom.touchmoved(ZoomSourceEvent(type: "touchmove", target: secondTarget,
+                                           touches: [first, moved], changedTouches: [moved]))
+            XCTAssertEqual(flow.store.viewport.get().zoom, 2, accuracy: 0.001, "arrival order \(order)")
+            zoom.touchended(ZoomSourceEvent(type: "touchend", target: secondTarget,
+                                           changedTouches: [first, moved]))
+        }
+    }
+
+    func testBuiltInLabelStillSelectsItsEdge() throws {
+        let flow = makeLabeledFlow()
+        let label = try label(in: flow)
+        XCTAssertEqual(label.flowClasses, ["svelte-flow__edge-label"])
+        XCTAssertTrue(label.isUserInteractionEnabled)
+        flow.dispatchClick(FlowPointerEvent(clientX: 0, clientY: 0, target: label))
+        XCTAssertEqual(flow.store.edges.get().first?.selected, true)
+    }
+
+    func testIntentionalNoPanClassStillBlocksTouchStarts() throws {
+        let flow = makeLabeledFlow()
+        let label = try label(in: flow)
+        label.flowClasses.insert(FlowClass.noPan)
+        let first = ZoomTouch(identifier: 1, point: XYPosition(x: 30, y: 30))
+        let second = ZoomTouch(identifier: 2, point: XYPosition(x: 90, y: 30))
+        let event = ZoomSourceEvent(type: "touchstart", target: label,
+                                    touches: [first, second], changedTouches: [first, second])
+        XCTAssertFalse(try XCTUnwrap(flow.zoomView.zoomBehavior).filter(event))
+    }
+
+    func testZoomOnPinchFalseStillBlocksMultiTouchOnLabels() throws {
+        let flow = makeLabeledFlow()
+        let label = try label(in: flow)
+        flow.zoomOnPinch = false
+        let first = ZoomTouch(identifier: 1, point: XYPosition(x: 30, y: 30))
+        let second = ZoomTouch(identifier: 2, point: XYPosition(x: 90, y: 30))
+        let event = ZoomSourceEvent(type: "touchstart", target: label,
+                                    touches: [first, second], changedTouches: [first, second])
+        XCTAssertFalse(try XCTUnwrap(flow.zoomView.zoomBehavior).filter(event))
+        XCTAssertTrue(event.defaultPrevented)
+    }
 }
 #endif

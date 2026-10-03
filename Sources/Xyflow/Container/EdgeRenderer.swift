@@ -317,6 +317,8 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
 
         var next: [EdgeWrapper] = []
         var seen = Set<String>()
+        next.reserveCapacity(layouted.count)
+        seen.reserveCapacity(layouted.count)
 
         for item in layouted {
             // an edge id is unique
@@ -364,7 +366,12 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
         }
 
         // the edge that is drawn last is on top, which is the one a touch finds first
-        hitOrder = next.enumerated()
+        // In the usual equal-z case, reverse source order is already the exact hit order.
+        // Re-read z each time: edge objects and their stacking values are publicly mutable.
+        let alreadyStacked = zip(next, next.dropFirst()).allSatisfy { pair in
+            pair.0.layer.zPosition <= pair.1.layer.zPosition
+        }
+        hitOrder = alreadyStacked ? Array(next.reversed()) : next.enumerated()
             .sorted { first, second in
                 if first.element.layer.zPosition != second.element.layer.zPosition {
                     return first.element.layer.zPosition > second.element.layer.zPosition

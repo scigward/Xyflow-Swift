@@ -137,6 +137,8 @@ final class NodeRenderer: FlowPassthroughView {
 
         var next: [NodeWrapperView] = []
         var seen = Set<String>()
+        next.reserveCapacity(nodes.count)
+        seen.reserveCapacity(nodes.count)
 
         for node in nodes {
             // a node id is unique
@@ -167,7 +169,13 @@ final class NodeRenderer: FlowPassthroughView {
         }
 
         // the nodes are stacked by their z index, and by their order when it is the same
-        let stacked = next.enumerated()
+        // Most flows already arrive in stacking order (especially all-z=0 graphs). A linear
+        // check avoids the sort and its intermediate arrays without caching mutable z values.
+        // NaN fails the check and follows the original comparator below.
+        let alreadyStacked = zip(next, next.dropFirst()).allSatisfy { pair in
+            pair.0.internalNode.internals.z <= pair.1.internalNode.internals.z
+        }
+        let stacked = alreadyStacked ? next : next.enumerated()
             .sorted { first, second in
                 let a = first.element.internalNode.internals.z
                 let b = second.element.internalNode.internals.z
