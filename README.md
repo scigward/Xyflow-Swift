@@ -55,7 +55,7 @@ Add the package in Xcode (File > Add Package Dependencies) with the URL of this 
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/scigward/Xyflow-Swift.git", branch: "main")
+    .package(url: "https://github.com/scigward/Xyflow-Swift.git", from: "1.0.0")
 ],
 targets: [
     .target(
@@ -68,7 +68,8 @@ targets: [
 ```
 
 `import Xyflow` is enough, it re-exports the types of `XYSystem`. Depend on the `XYSystem` product instead if you
-only want the core without the views. There are no tagged releases yet, so the dependency follows `main`.
+only want the core without the views. Releases are tagged and listed under
+[Releases](https://github.com/scigward/Xyflow-Swift/releases).
 
 ## Quick start
 
