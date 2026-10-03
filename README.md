@@ -136,7 +136,7 @@ rest, such as `panOnScroll`, `zoomOnScroll`, `onlyRenderVisibleElements`, `selec
 | `<Panel>`                              | `FlowPanelView`                                      |
 | `<ViewportPortal>`                     | `flow.viewportPortal`                                |
 | the `nodrag`, `nopan`, `nowheel` and `nokey` classes | `view.flowClasses = [FlowClass.noDrag]` and the like |
-| promises                               | completion handlers                                  |
+| promises                               | `async` functions, or completion handlers            |
 
 ## Customizing
 
@@ -198,10 +198,10 @@ views of its labels.
 
 ### Styles
 
-There are no stylesheets. The style of a flow is the set of custom properties of its root scope
-(`flow.rootScope()`): the theme of its color mode, then `flow.styleVariables`, then the declarations of
-`flow.style`, each overriding the one before. Nodes, edges and plugins resolve their colors against it. Style
-strings work the way they do on the web: `Node.style`, `Edge.style` and `Edge.labelStyle` take declarations, and
+The style of a flow is the set of custom properties of its root scope (`flow.rootScope()`): the theme of its
+color mode, then `flow.styleSheet`, then `flow.styleVariables`, then the declarations of `flow.style`, each
+overriding the one before. Nodes, edges and plugins resolve their colors against it. Style strings work the way
+they do on the web: `Node.style`, `Edge.style`, `Edge.labelStyle` and `HandleView.style` take declarations, and
 `var()` finds the variables. All the `--xy-*` properties of the default theme are there, light and dark.
 
 ```swift
@@ -212,17 +212,46 @@ edge.style = "--xy-edge-stroke: var(--accent)"
 edge.labelStyle = "--xy-edge-label-color: var(--accent)"
 ```
 
+`flow.styleSheet` takes CSS, for the nodes, edges and handles that share a look:
+
+```swift
+flow.styleSheet = """
+.svelte-flow__node.selected { --xy-node-border: 1px solid var(--accent) }
+.dark .svelte-flow__edge-path { stroke-width: 2 }
+.svelte-flow__handle.connectingfrom { --xy-handle-background-color: var(--accent) }
+.important-node { background-color: #fff3d6 !important }
+"""
+```
+
+Only a part of CSS is read. A selector is a list of chains of classes (`.a.b`), or `*`, joined by a space or
+`>`; ids, tags, attributes and pseudo classes such as `:hover` never match, and at-rules like `@media` are
+skipped. A declaration is read the way it is in a style string, and one in a stylesheet loses against the style
+of the node, edge or handle itself. The classes are the ones of Svelte Flow (`swift-flow__node` is the same class
+as `svelte-flow__node`):
+
+| Element | Classes |
+| ------- | ------- |
+| The flow | `svelte-flow`, `light` or `dark`, and its `flowClasses` |
+| A node | `svelte-flow__node`, `svelte-flow__node-<type>`, its `className`, `selected`, `selectable`, `draggable`, `dragging` |
+| A handle | `svelte-flow__handle`, `svelte-flow__handle-<position>`, `source` or `target`, the position, `connectionindicator`, `connectingfrom`, `connectingto`, `valid` |
+| An edge | `svelte-flow__edge`, `svelte-flow__edge-<type>`, its `className`, `animated`, `selected`, `selectable` |
+| The path and the label of an edge | `svelte-flow__edge-path`, `svelte-flow__edge-label` |
+
 ## Reading and changing the flow
 
 `flow.instance` is `useSvelteFlow()`: `fitView`, `zoomIn`, `zoomOut`, `setViewport`, `getNodes`,
 `screenToFlowPosition`, `getIntersectingNodes`, `updateNodeData`, `deleteElements` and the rest. Where the web
-version returns a promise, the function takes a completion handler. The stores behind the hooks (`nodes`, `edges`,
-`viewport`, `connection` and so on) are `Readable` and `Writable` objects with the semantics of `svelte/store`.
+version returns a promise, the function takes a completion handler, or can be awaited. The stores behind the hooks
+(`nodes`, `edges`, `viewport`, `connection` and so on) are `Readable` and `Writable` objects with the semantics of
+`svelte/store`.
 
 ```swift
 flow.instance.fitView()
 flow.instance.setViewport(Viewport(x: 0, y: 0, zoom: 1))
 flow.instance.updateNodeData("1", ["label": "Hi"])
+
+let fitted = await flow.instance.fitView(FitViewOptions(duration: 300))
+let deleted = await flow.instance.deleteElements(nodes: ["2"])
 
 flow.nodes.update { $0 + [Node(id: "3", position: XYPosition(x: 400, y: 0))] }
 ```
@@ -252,6 +281,9 @@ A touch is routed the way the events of a page bubble, from the view it started 
 
 A view with one of the classes `nodrag`, `nopan`, `nowheel` or `nokey` in `flowClasses` opts out of that input.
 
+The keys of a hardware keyboard reach every flow that is on screen, like the keys that a page listens to on
+`window`, so a flow does not have to be touched first. A text field that has the focus keeps its keys.
+
 ## Plugins
 
 | View              | What it does                                                                |
@@ -277,11 +309,26 @@ flow.add(controls)
 
 ## Differences from the web version
 
-- Promises are completion handlers, `async` is not used anywhere.
-- There are no stylesheets, see [Styles](#styles).
-- Edges are drawn in layers below the nodes, so an edge with a `zIndex` above the nodes of the flow is still below
-  them.
-- Keyboard events need the flow to be the first responder, which it becomes when it is touched.
+- A viewport change that the user cuts short (by touching the flow during a `fitView`, say) answers `false` to
+  `await`, where the promise of the web version stays open.
+- Stylesheets read a part of CSS, see [Styles](#styles).
+- An edge is drawn in front of the nodes with a lower `zIndex` than its own, and behind the others. Its label is
+  always behind the nodes.
+- Key events come from GameController when the flow does not have the focus, so only a hardware keyboard sends
+  them, and the modifier keys that are held are the ones of that keyboard.
+
+## Big graphs
+
+`onlyRenderVisibleElements` keeps the views of the nodes and edges that are off screen out of the flow, which is
+what to set for a graph of a few hundred nodes. What the flow does to stay fast while it is panned and zoomed:
+
+- The list of the nodes and edges on screen is only passed on when it is another list than before, so panning
+  over the same nodes does not touch any view.
+- A node, an edge or a handle is only drawn again when something it is drawn from changed, which is its values,
+  the style of the flow or its stylesheet.
+- The views of nodes and edges that left the screen are kept for when they come back.
+- The pattern of the background is drawn once and moved, and is drawn again for another zoom.
+- The paths of the edges are not animated, and the dashes of animated edges move at 30 frames a second.
 
 ## Layout of the repository
 
