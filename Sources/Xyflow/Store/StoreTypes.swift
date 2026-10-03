@@ -132,6 +132,10 @@ public struct EdgeRenderContext {
     public var selectEdge: (String) -> Void
     /// The font of the text of the flow, for a size and a weight.
     public var font: (CGFloat, UIFont.Weight) -> UIFont
+    /// The stylesheet of the flow, and the classes of the views the edges and their labels are among.
+    public var styleSheet: FlowStyleSheet?
+    public var edgeAncestors: [Set<String>]
+    public var labelAncestors: [Set<String>]
 
     public init(
         styleScope: FlowStyleScope,
@@ -139,7 +143,10 @@ public struct EdgeRenderContext {
         flowId: String?,
         theme: ColorModeClass,
         selectEdge: @escaping (String) -> Void = { _ in },
-        font: @escaping (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) }
+        font: @escaping (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) },
+        styleSheet: FlowStyleSheet? = nil,
+        edgeAncestors: [Set<String>] = [],
+        labelAncestors: [Set<String>] = []
     ) {
         self.styleScope = styleScope
         self.markers = markers
@@ -147,6 +154,9 @@ public struct EdgeRenderContext {
         self.theme = theme
         self.selectEdge = selectEdge
         self.font = font
+        self.styleSheet = styleSheet
+        self.edgeAncestors = edgeAncestors
+        self.labelAncestors = labelAncestors
     }
 }
 

@@ -52,6 +52,9 @@ public final class HandleView: UIView, HandleElement, FlowPointerDownHandling {
     private var previousConnections: OrderedMap<String, HandleConnection>?
     private weak var observedStore: SwiftFlowStore?
     private weak var observedWrapper: NodeWrapperView?
+    /// The style of the handle: what the stylesheet gives it, and then its own `style`.
+    private var resolvedStyle: String?
+    private var lastState: [Bool] = []
 
     private(set) var isConnectingFrom = false
     private(set) var isConnectingTo = false
@@ -95,16 +98,20 @@ public final class HandleView: UIView, HandleElement, FlowPointerDownHandling {
 
     /// `width: 6px; height: 6px; border: 1px solid` of a handle: the box is 8 points square.
     private func updateSize() {
-        NSLayoutConstraint.deactivate(sizeConstraints)
-
         let scope = styleScope()
         let border = 1.0
-        let width = (declaredLength("width") ?? scope.number(["--xy-handle-width"]) ?? 6) + border * 2
-        let height = (declaredLength("height") ?? scope.number(["--xy-handle-height"]) ?? 6) + border * 2
+        let width = max((declaredLength("width") ?? scope.number(["--xy-handle-width"]) ?? 6) + border * 2, 5)
+        let height = max((declaredLength("height") ?? scope.number(["--xy-handle-height"]) ?? 6) + border * 2, 5)
 
+        // the constraints are only made again for another size
+        if !sizeConstraints.isEmpty && sizeConstraints[0].constant == CGFloat(width) && sizeConstraints[1].constant == CGFloat(height) {
+            return
+        }
+
+        NSLayoutConstraint.deactivate(sizeConstraints)
         sizeConstraints = [
-            widthAnchor.constraint(equalToConstant: CGFloat(max(width, 5))),
-            heightAnchor.constraint(equalToConstant: CGFloat(max(height, 5)))
+            widthAnchor.constraint(equalToConstant: CGFloat(width)),
+            heightAnchor.constraint(equalToConstant: CGFloat(height))
         ]
         NSLayoutConstraint.activate(sizeConstraints)
     }
@@ -219,6 +226,15 @@ public final class HandleView: UIView, HandleElement, FlowPointerDownHandling {
 
         isValid = isConnectingTo && state.isValid == true
         isConnectionIndicator = isConnectableValue && (!connectionInProcess || isPossibleEndHandle)
+
+        // a stylesheet can style the states of the handle
+        let current = [isConnectingFrom, isConnectingTo, isValid, isConnectionIndicator]
+        if current != lastState {
+            lastState = current
+            if enclosingFlow?.parsedStyleSheet != nil {
+                updateAppearance()
+            }
+        }
     }
 
     /// `onconnect` and `ondisconnect`: the connections of this handle are looked up again when the edges change.
@@ -255,8 +271,25 @@ public final class HandleView: UIView, HandleElement, FlowPointerDownHandling {
 
     // MARK: Look
 
+    private var activeStyle: String? {
+        resolvedStyle ?? style
+    }
+
+    /// The classes of a handle, which are the ones of its states as well.
+    private var styleClasses: Set<String> {
+        var classes: Set<String> = [
+            FlowClass.handle, "\(FlowClass.handle)-\(position.rawValue)", position.rawValue, type.rawValue,
+            FlowClass.noDrag, FlowClass.noPan
+        ]
+        if isConnectionIndicator { classes.insert("connectionindicator") }
+        if isConnectingFrom { classes.insert("connectingfrom") }
+        if isConnectingTo { classes.insert("connectingto") }
+        if isValid { classes.insert("valid") }
+        return classes
+    }
+
     private func declaredLength(_ name: String) -> Double? {
-        for declaration in FlowCSS.parseDeclarations(style) where declaration.name == name {
+        for declaration in FlowCSS.parseDeclarations(activeStyle) where declaration.name == name {
             return FlowCSS.parseLength(declaration.value)
         }
         return nil
@@ -264,7 +297,7 @@ public final class HandleView: UIView, HandleElement, FlowPointerDownHandling {
 
     private func declaredValue(_ name: String) -> String? {
         var found: String?
-        for declaration in FlowCSS.parseDeclarations(style) where declaration.name == name {
+        for declaration in FlowCSS.parseDeclarations(activeStyle) where declaration.name == name {
             found = declaration.value
         }
         return found
@@ -273,10 +306,16 @@ public final class HandleView: UIView, HandleElement, FlowPointerDownHandling {
     /// The style the handle reads its colors from: its own declarations on top of the ones of its node.
     func styleScope() -> FlowStyleScope {
         let parent = nodeWrapper?.styleScope ?? FlowStyleScope(properties: FlowTheme.light)
-        return FlowStyleScope(parent: parent, style: style)
+        return FlowStyleScope(parent: parent, style: activeStyle)
     }
 
     func updateAppearance() {
+        if let sheet = enclosingFlow?.parsedStyleSheet {
+            resolvedStyle = sheet.style(classes: styleClasses, ancestors: styleAncestors(), inline: style)
+        } else {
+            resolvedStyle = style
+        }
+
         let scope = styleScope()
 
         var background = scope.color(["--xy-handle-background-color", "--xy-handle-background-color-default"])

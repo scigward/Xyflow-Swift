@@ -171,8 +171,12 @@ public final class SwiftFlowStore {
         let viewport = self.viewport
         let onlyRenderVisibleElements = self.onlyRenderVisibleElements
 
+        // The viewport moves with every frame of a pan, and most of the time the same nodes are on
+        // screen after it: then nobody is told.
         visibleNodes = Derived<[InternalNode]>(
-            [nodeLookup, onlyRenderVisibleElements, width, height, viewport, nodes]
+            [nodeLookup, onlyRenderVisibleElements, nodes],
+            quiet: [width, height, viewport],
+            isEqual: sameObjects
         ) {
             let lookup = nodeLookup.get()
             let current = viewport.get()
@@ -193,7 +197,9 @@ public final class SwiftFlowStore {
         let onerror = self.onerror
 
         let visibleEdgesUnlayouted = Derived<[Edge]>(
-            [edges, nodes, nodeLookup, onlyRenderVisibleElements, viewport, width, height]
+            [edges, nodes, nodeLookup, onlyRenderVisibleElements],
+            quiet: [viewport, width, height],
+            isEqual: sameObjects
         ) {
             let allEdges = edges.get()
             let lookup = nodeLookup.get()
@@ -256,7 +262,12 @@ public final class SwiftFlowStore {
         }
 
         let currentConnection = self.currentConnection
-        connection = Derived<ConnectionState>([currentConnection, viewport]) {
+        // the viewport only changes the connection while one is being made
+        connection = Derived<ConnectionState>(
+            [currentConnection],
+            quiet: [viewport],
+            isEqual: { _, next in !(next.inProgress && next.to != nil) }
+        ) {
             let state = currentConnection.get()
             let current = viewport.get()
 

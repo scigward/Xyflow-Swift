@@ -167,7 +167,7 @@ public final class ControlButton: UIControl {
     private var isHovered = false
 
     public override var isEnabled: Bool {
-        didSet { refresh() }
+        didSet { if isEnabled != oldValue { refresh() } }
     }
 
     public init(icon: FlowIcon? = nil) {

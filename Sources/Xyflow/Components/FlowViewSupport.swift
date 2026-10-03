@@ -35,6 +35,24 @@ extension UIView {
         }
     }
 
+    /// The classes of the views this one is in, the nearest first, as a stylesheet sees the elements
+    /// around an element. A flow also has the class of its color mode.
+    func styleAncestors() -> [Set<String>] {
+        var result: [Set<String>] = []
+        var current = superview
+
+        while let view = current {
+            if let flow = view as? SwiftFlow {
+                result.append(flow.styleClasses)
+            } else {
+                result.append(view.flowClasses)
+            }
+            current = view.superview
+        }
+
+        return result
+    }
+
     /// `closest('.className')`: this view or the first one above it with the class.
     public func flowClosest(withClass className: String) -> UIView? {
         var current: UIView? = self

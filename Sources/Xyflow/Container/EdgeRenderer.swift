@@ -2,6 +2,33 @@
 import UIKit
 import XYSystem
 
+/// What an edge is drawn from. When none of it changed since the last time, the edge is not drawn again.
+private struct EdgeSignature: Equatable {
+    var dataRevision: Int
+    var type: String?
+    var source: String
+    var target: String
+    var sourceHandle: String?
+    var targetHandle: String?
+    var hidden: Bool
+    var animated: Bool
+    var selected: Bool
+    var selectable: Bool
+    var deletable: Bool
+    var markerStart: EdgeMarkerType?
+    var markerEnd: EdgeMarkerType?
+    var interactionWidth: Double?
+    var label: String?
+    var labelStyle: String?
+    var style: String?
+    var pathOptions: EdgePathOptions?
+    var className: String?
+    var zIndex: Double?
+    var position: EdgePosition
+    /// Changes when something the edges are drawn with does: the style of the flow, the markers, the font.
+    var context: Int
+}
+
 /// `EdgeWrapper.svelte`: one edge of the flow, drawn by the component of its type.
 final class EdgeWrapper {
     let id: String
@@ -12,6 +39,7 @@ final class EdgeWrapper {
     private(set) var component: FlowEdgeComponent?
     private var componentType: String?
     private(set) var isHidden = false
+    private var lastSignature: EdgeSignature?
 
     init(edge: Edge) {
         self.id = edge.id
@@ -22,9 +50,40 @@ final class EdgeWrapper {
         component?.labelViews ?? []
     }
 
-    func apply(_ layouted: EdgeLayouted, store: SwiftFlowStore, context: EdgeRenderContext) {
+    func apply(_ layouted: EdgeLayouted, store: SwiftFlowStore, context: EdgeRenderContext, contextVersion: Int) {
         let edge = layouted.edge
+        let replaced = edge !== self.edge
         self.edge = edge
+
+        let signature = EdgeSignature(
+            dataRevision: edge.dataRevision,
+            type: edge.type,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle,
+            targetHandle: edge.targetHandle,
+            hidden: edge.hidden == true,
+            animated: edge.animated ?? false,
+            selected: edge.selected ?? false,
+            selectable: edge.selectable ?? store.elementsSelectable.get(),
+            deletable: edge.deletable ?? true,
+            markerStart: edge.markerStart,
+            markerEnd: edge.markerEnd,
+            interactionWidth: edge.interactionWidth,
+            label: edge.label,
+            labelStyle: edge.labelStyle,
+            style: edge.style,
+            pathOptions: edge.pathOptions,
+            className: edge.className,
+            zIndex: layouted.zIndex,
+            position: layouted.position,
+            context: contextVersion)
+
+        // an edge that is drawn the way it already is costs nothing
+        if !replaced, component != nil || signature.hidden, signature == lastSignature {
+            return
+        }
+        lastSignature = signature
 
         isHidden = edge.hidden == true
         layer.isHidden = isHidden
@@ -49,6 +108,28 @@ final class EdgeWrapper {
         }
 
         guard let component else { return }
+
+        // the stylesheet comes before the style of the edge, which wins
+        var style = edge.style
+        var labelStyle = edge.labelStyle
+
+        if let sheet = context.styleSheet {
+            var classes: Set<String> = [FlowClass.edge, "\(FlowClass.edge)-\(edgeType)"]
+            for name in (edge.className ?? "").split(separator: " ") {
+                classes.insert(String(name))
+            }
+            if edge.animated == true { classes.insert("animated") }
+            if edge.selected == true { classes.insert("selected") }
+            if signature.selectable { classes.insert("selectable") }
+
+            // the edge is a group of elements: what is set on it is what its path inherits
+            let group = sheet.style(classes: classes, ancestors: context.edgeAncestors)
+            let path = sheet.style(classes: ["svelte-flow__edge-path"], ancestors: [classes] + context.edgeAncestors)
+            style = [group, path, edge.style].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "; ")
+
+            labelStyle = sheet.style(
+                classes: ["svelte-flow__edge-label"], ancestors: context.labelAncestors, inline: edge.labelStyle)
+        }
 
         let position = layouted.position
         let markerStart = edge.markerStart.flatMap { marker -> String? in
@@ -78,8 +159,8 @@ final class EdgeWrapper {
                 selectable: edge.selectable ?? store.elementsSelectable.get(),
                 deletable: edge.deletable ?? true,
                 label: edge.label,
-                labelStyle: edge.labelStyle,
-                style: edge.style,
+                labelStyle: labelStyle,
+                style: style,
                 interactionWidth: edge.interactionWidth,
                 sourceHandleId: edge.sourceHandle,
                 targetHandleId: edge.targetHandle,
@@ -110,10 +191,19 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     /// Where the labels of the edges go.
     private weak var labelHost: UIView?
 
+    /// The layer the layers of the edges are put in, below the ones of the nodes. It is the layer of the
+    /// node renderer, which makes the `zIndex` of an edge count against the ones of the nodes the way it
+    /// does on the web: both are `zPosition`s of siblings. Without one the renderer draws in its own layer.
+    private weak var layerHost: CALayer?
+
     /// What the edges read their style from.
     var styleScope: () -> FlowStyleScope = { FlowStyleScope(properties: FlowTheme.light) }
     var colorModeClass: () -> ColorModeClass = { .light }
-    var font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) }
+    var font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) } {
+        didSet { contextVersion += 1 }
+    }
+
+    var styleSheet: () -> FlowStyleSheet? = { nil }
 
     var onEdgeClick: ((EdgeEvent) -> Void)?
     var onEdgeContextMenu: ((EdgeEvent) -> Void)?
@@ -121,6 +211,11 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     var onEdgeMouseLeave: ((EdgeEvent) -> Void)?
 
     private var wrappers: [String: EdgeWrapper] = [:]
+    /// The edges that went off screen. They are kept so an edge that comes back is not made again,
+    /// until there are more of them than `detachedLimit`.
+    private var detached: [String: EdgeWrapper] = [:]
+    private var detachedOrder: [String] = []
+    private let detachedLimit = 256
     private var ordered: [EdgeWrapper] = []
     private var hitOrder: [EdgeWrapper] = []
     private var managedLabels: [ObjectIdentifier: UIView] = [:]
@@ -129,9 +224,17 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     private var hasEdges = false
     private var isReconciling = false
 
-    init(store: SwiftFlowStore, labelHost: UIView) {
+    // What the edges were drawn with the last time: when it differs they are all drawn again.
+    private var contextVersion = 0
+    private var lastScope: FlowStyleScope?
+    private var lastMarkers: [MarkerProps]?
+    private var lastFlowId: String?
+    private var lastTheme: ColorModeClass?
+
+    init(store: SwiftFlowStore, labelHost: UIView, layerHost: CALayer? = nil) {
         self.store = store
         self.labelHost = labelHost
+        self.layerHost = layerHost
         super.init(frame: .zero)
 
         flowClasses = ["svelte-flow__edges"]
@@ -166,6 +269,8 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
         // the components of the edges are made again by the types that are given now
         let current = wrappers
         wrappers = [:]
+        detached = [:]
+        detachedOrder = []
         ordered = []
         current.values.forEach { $0.tearDown() }
         reconcile()
@@ -178,14 +283,32 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
         isReconciling = true
         defer { isReconciling = false }
 
+        // the paths of the edges change from one frame to the next: they are not animated
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        defer { CATransaction.commit() }
+
         let layouted = store.visibleEdges.get()
+        let sheet = styleSheet()
         let context = EdgeRenderContext(
             styleScope: styleScope(),
             markers: store.markers.get(),
             flowId: store.flowId.get(),
             theme: colorModeClass(),
             selectEdge: { [weak store] id in store?.handleEdgeSelect(id) },
-            font: font)
+            font: font,
+            styleSheet: sheet,
+            edgeAncestors: sheet == nil ? [] : [flowClasses] + styleAncestors(),
+            labelAncestors: sheet == nil ? [] : labelHost.map { [$0.flowClasses] + $0.styleAncestors() } ?? [])
+
+        if context.styleScope !== lastScope || context.markers != lastMarkers
+            || context.flowId != lastFlowId || context.theme != lastTheme {
+            lastScope = context.styleScope
+            lastMarkers = context.markers
+            lastFlowId = context.flowId
+            lastTheme = context.theme
+            contextVersion += 1
+        }
 
         var next: [EdgeWrapper] = []
         var seen = Set<String>()
@@ -197,27 +320,35 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
             let wrapper: EdgeWrapper
             if let existing = wrappers[item.id] {
                 wrapper = existing
+            } else if let kept = detached.removeValue(forKey: item.id) {
+                detachedOrder.removeAll { $0 == item.id }
+                wrapper = kept
+                wrappers[item.id] = kept
             } else {
                 wrapper = EdgeWrapper(edge: item.edge)
                 wrappers[item.id] = wrapper
             }
 
-            wrapper.apply(item, store: store, context: context)
+            wrapper.apply(item, store: store, context: context, contextVersion: contextVersion)
             next.append(wrapper)
         }
 
         for (id, wrapper) in wrappers where !seen.contains(id) {
             wrapper.tearDown()
             wrappers[id] = nil
+            keepDetached(wrapper, id: id)
         }
 
-        // the order of the layers is the order of the edges
-        let needsReorder = next.count != ordered.count || zip(next, ordered).contains { $0 !== $1 }
+        // the order of the layers is the order of the edges, all of them below the nodes
+        let host = layerHost ?? layer
+        let needsReorder = next.count != ordered.count
+            || zip(next, ordered).contains { $0 !== $1 }
+            || next.contains { $0.layer.superlayer !== host }
         ordered = next
-        if needsReorder || layer.sublayers?.count != next.count {
-            for wrapper in next {
+        if needsReorder {
+            for (index, wrapper) in next.enumerated() {
                 wrapper.layer.removeFromSuperlayer()
-                layer.addSublayer(wrapper.layer)
+                host.insertSublayer(wrapper.layer, at: UInt32(index))
             }
         }
 
@@ -238,6 +369,19 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
         if has != hasEdges {
             hasEdges = has
             store.edgesInitialized.set(has)
+        }
+    }
+
+    private func keepDetached(_ wrapper: EdgeWrapper, id: String) {
+        // an edge that is gone from the flow is not kept
+        guard store.edgeLookup.get().get(id) != nil else { return }
+
+        detached[id] = wrapper
+        detachedOrder.removeAll { $0 == id }
+        detachedOrder.append(id)
+
+        while detachedOrder.count > detachedLimit {
+            detached[detachedOrder.removeFirst()] = nil
         }
     }
 
@@ -277,6 +421,12 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         guard !isHidden, isUserInteractionEnabled else { return nil }
         return wrapper(containing: point) != nil ? self : nil
+    }
+
+    /// The z index of the edge that is drawn on top at a point, if there is one.
+    func zIndexOfEdge(at point: CGPoint) -> Double? {
+        guard !isHidden, let wrapper = wrapper(containing: point) else { return nil }
+        return Double(wrapper.layer.zPosition)
     }
 
     func edge(at event: FlowPointerEvent) -> Edge? {

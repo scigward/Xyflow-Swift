@@ -1,6 +1,26 @@
 import XCTest
 @testable import XYSystem
 
+final class EdgeRevisionTests: XCTestCase {
+    func testChangingTheDataBumpsTheRevision() {
+        let edge = Edge(id: "e", source: "a", target: "b")
+        XCTAssertEqual(edge.dataRevision, 0)
+
+        edge.data = ["weight": 1]
+        XCTAssertEqual(edge.dataRevision, 1)
+
+        edge.data?["weight"] = 2
+        XCTAssertEqual(edge.dataRevision, 2)
+    }
+
+    func testACopyStartsAgain() {
+        let edge = Edge(id: "e", source: "a", target: "b", data: ["weight": 1])
+        edge.data = ["weight": 2]
+
+        XCTAssertEqual(edge.copy().dataRevision, 0)
+    }
+}
+
 final class OrderedMapTests: XCTestCase {
     func testKeepsInsertionOrder() {
         let map = OrderedMap<String, Int>()

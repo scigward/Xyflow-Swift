@@ -93,6 +93,33 @@ extension FlowKeyEvent {
             target: target)
     }
 
+    /// A key that is only known by its HID usage, which is how a keyboard is reported when no view is asked:
+    /// the named keys, the letters and the digits are known, any other key by the name the keyboard gives it.
+    init?(usage: Int, name: String?, modifiers: EventModifiers, target: AnyObject? = nil) {
+        let key: String
+        let code: String
+
+        if let hid = UIKeyboardHIDUsage(rawValue: usage), let named = FlowKeyEvent.names[hid] {
+            key = named.key
+            code = named.code
+        } else if (4...29).contains(usage) {
+            let letter = String(UnicodeScalar(UInt8(97 + usage - 4)))
+            key = modifiers.contains(.shift) ? letter.uppercased() : letter
+            code = "Key" + letter.uppercased()
+        } else if (30...39).contains(usage) {
+            let digit = usage == 39 ? "0" : String(usage - 29)
+            key = digit
+            code = "Digit" + digit
+        } else if let name, !name.isEmpty {
+            key = name
+            code = ""
+        } else {
+            return nil
+        }
+
+        self.init(key: key, code: code, modifiers: modifiers, isRepeat: false, target: target)
+    }
+
     private static let names: [UIKeyboardHIDUsage: (key: String, code: String)] = [
         .keyboardLeftShift: ("Shift", "ShiftLeft"),
         .keyboardRightShift: ("Shift", "ShiftRight"),

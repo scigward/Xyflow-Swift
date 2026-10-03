@@ -22,6 +22,14 @@ private struct NodeSignature: Equatable {
     var targetPosition: Position?
     var dragHandle: String?
     var parentId: String?
+    var hidden: Bool
+    var hasDimensions: Bool
+    var measuredWidth: Double?
+    var measuredHeight: Double?
+    var initialWidth: Double?
+    var initialHeight: Double?
+    var style: String?
+    var className: String?
 }
 
 /// The element of a node (`.svelte-flow__node`): it holds the view of the node's type, is placed where
@@ -37,6 +45,10 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
 
     /// Where the style of the node starts from: the root of the flow. Set by whoever makes the node.
     var parentScope: () -> FlowStyleScope = { FlowStyleScope(properties: FlowTheme.light) }
+
+    /// The stylesheet of the flow, and the classes of the views the node is among.
+    var parentSheet: () -> FlowStyleSheet? = { nil }
+    var parentAncestors: () -> [Set<String>] = { [] }
 
     // Events, which the renderer hands on to the callbacks of the flow.
     var onNodeClick: ((NodeEvent) -> Void)?
@@ -58,6 +70,14 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
     private var contentType: String?
     private var xyDrag: XYDrag!
     private var lastSignature: NodeSignature?
+    /// The style of the flow the node was drawn with: a node is drawn again when the flow got another.
+    private var lastParentScope: FlowStyleScope?
+    /// A node that was replaced by another object is a different node, whatever its values are.
+    private var lastUserNode: Node?
+    /// The style of the node: what the stylesheet gives it, and then its own `style`.
+    private var effectiveStyle: String?
+    /// The spread of the shadow that is drawn, so its path can follow the size of the node.
+    private var shadowSpread: CGFloat?
     private var lastReportedSize: CGSize?
     private var lastLayoutKey: String?
     private var isSelected = false
@@ -111,13 +131,14 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
 
     /// The custom properties of the node: its `style` on top of the ones of the flow.
     public var styleScope: FlowStyleScope {
-        FlowStyleScope(parent: parentScope(), style: internalNode.internals.userNode.style ?? internalNode.style)
+        FlowStyleScope(parent: parentScope(), style: effectiveStyle)
     }
 
     // MARK: Updating
 
     /// Brings the view in line with the node: its type, its place, its size, its looks and the props of its content.
-    func apply(_ node: InternalNode) {
+    /// A node that is the same as the last time is left alone, unless `force` says that something around it changed.
+    func apply(_ node: InternalNode, force: Bool = false) {
         internalNode = node
         let userNode = node.internals.userNode
 
@@ -151,13 +172,7 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
             rebuildContent(type: nodeType)
         }
 
-        var classes: Set<String> = [FlowClass.node, "\(FlowClass.node)-\(nodeType)"]
-        for name in (userNode.className ?? node.className ?? "").split(separator: " ") {
-            classes.insert(String(name))
-        }
-        if draggable { classes.insert(FlowClass.noPan) }
-        flowClasses = classes
-
+        let hasDimensions = nodeHasDimensions(node)
         let signature = NodeSignature(
             dataRevision: userNode.dataRevision,
             type: nodeType,
@@ -175,10 +190,44 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
             sourcePosition: node.sourcePosition,
             targetPosition: node.targetPosition,
             dragHandle: node.dragHandle,
-            parentId: node.parentId)
+            parentId: node.parentId,
+            hidden: hidden,
+            hasDimensions: hasDimensions,
+            measuredWidth: node.measured.width,
+            measuredHeight: node.measured.height,
+            initialWidth: node.initialWidth,
+            initialHeight: node.initialHeight,
+            style: userNode.style ?? node.style,
+            className: userNode.className ?? node.className)
 
+        let scope = parentScope()
         let changed = signature != lastSignature
+        let scopeChanged = lastParentScope !== scope
+        let unchanged = !changed && !force && !scopeChanged && lastUserNode === userNode
         lastSignature = signature
+        lastParentScope = scope
+        lastUserNode = userNode
+
+        // everything below only depends on what is in the signature and on the style of the flow;
+        // a node without dimensions is measured again every time it is told, until it has them
+        if unchanged && (hidden || hasDimensions) {
+            return
+        }
+
+        var classes: Set<String> = [FlowClass.node, "\(FlowClass.node)-\(nodeType)"]
+        for name in (userNode.className ?? node.className ?? "").split(separator: " ") {
+            classes.insert(String(name))
+        }
+        if draggable { classes.insert(FlowClass.noPan) }
+        if selected { classes.insert("selected") }
+        if selectable { classes.insert("selectable") }
+        if draggable { classes.insert("draggable") }
+        if node.dragging == true { classes.insert("dragging") }
+        flowClasses = classes
+
+        let ownStyle = userNode.style ?? node.style
+        let sheet = parentSheet()
+        effectiveStyle = sheet?.style(classes: classes, ancestors: parentAncestors(), inline: ownStyle) ?? ownStyle
 
         if changed {
             contentView?.update(props: NodeProps(
@@ -202,6 +251,9 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
                 positionAbsoluteY: position.y))
         }
 
+        // nodes and edges are in front of each other by their z index
+        layer.zPosition = CGFloat(node.internals.z)
+
         if hidden {
             return
         }
@@ -209,8 +261,15 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
         updateAppearance()
         layoutNode(at: position)
 
+        // the handles are drawn from the style of the node, and from the classes of it a stylesheet sees
+        if scopeChanged || (changed && sheet != nil) {
+            for handle in handleViews(in: self) {
+                handle.updateAppearance()
+            }
+        }
+
         // `style:visibility={initialized ? 'visible' : 'hidden'}`
-        alpha = nodeHasDimensions(node) ? 1 : 0
+        alpha = hasDimensions ? 1 : 0
 
         updateDrag()
 
@@ -225,7 +284,7 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
         }
 
         // the node is measured again, for as long as it has no dimensions
-        if !nodeHasDimensions(node) {
+        if !hasDimensions {
             lastReportedSize = nil
         }
 
@@ -257,7 +316,7 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
         contentView = nil
         contentType = nil
         lastSignature = nil
-        apply(internalNode)
+        apply(internalNode, force: true)
     }
 
     // MARK: Drag
@@ -287,7 +346,7 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
     /// The declarations of the node's `style` that are set on the node's own box.
     private func inlineStyle() -> [String: String] {
         var values: [String: String] = [:]
-        for declaration in FlowCSS.parseDeclarations(internalNode.internals.userNode.style ?? internalNode.style) {
+        for declaration in FlowCSS.parseDeclarations(effectiveStyle) {
             values[declaration.name] = declaration.value
         }
         return values
@@ -359,11 +418,10 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
             layer.shadowOpacity = 1
             layer.shadowOffset = CGSize(width: shadow.offsetX, height: shadow.offsetY)
             layer.shadowRadius = CGFloat(shadow.blur / 2)
-            let spread = CGFloat(shadow.spread)
-            layer.shadowPath = UIBezierPath(
-                roundedRect: bounds.insetBy(dx: -spread, dy: -spread),
-                cornerRadius: layer.cornerRadius + spread).cgPath
+            shadowSpread = CGFloat(shadow.spread)
+            updateShadowPath()
         } else {
+            shadowSpread = nil
             layer.shadowOpacity = 0
             layer.shadowPath = nil
         }
@@ -375,6 +433,13 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
         if let component = contentView as? BuiltInNodeContent {
             component.textColor = (textColor ?? scope.inheritedColor()).map { $0.uiColor } ?? .label
         }
+    }
+
+    private func updateShadowPath() {
+        guard let spread = shadowSpread else { return }
+        layer.shadowPath = UIBezierPath(
+            roundedRect: bounds.insetBy(dx: -spread, dy: -spread),
+            cornerRadius: layer.cornerRadius + spread).cgPath
     }
 
     // MARK: Size and place
@@ -421,6 +486,7 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
         }
 
         frame = CGRect(x: CGFloat(position.x), y: CGFloat(position.y), width: size.width, height: size.height)
+        updateShadowPath()
 
         if let contentView {
             contentView.frame = CGRect(
@@ -491,7 +557,7 @@ public final class NodeWrapperView: UIView, NodeElement, FlowElement, FlowDragHo
     /// The size of the node changed from the inside: it is laid out again.
     public func contentSizeDidChange() {
         lastLayoutKey = nil
-        apply(internalNode)
+        apply(internalNode, force: true)
     }
 
     // MARK: Touches

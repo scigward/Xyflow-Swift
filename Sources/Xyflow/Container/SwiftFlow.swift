@@ -346,17 +346,38 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
     /// The style of the flow, as the `style` attribute of the component has it: custom properties like
     /// `--xy-background-color` and `--xy-edge-stroke`, and `background-color`.
     public var style: String? {
-        didSet { invalidateTheme() }
+        didSet { if style != oldValue { invalidateTheme() } }
     }
 
     /// Custom properties that `var(--name)` of the styles of the nodes and edges can refer to.
     public var styleVariables: [String: String] = [:] {
-        didSet { invalidateTheme() }
+        didSet { if styleVariables != oldValue { invalidateTheme() } }
     }
 
     /// The color text has where nothing else says, which is what nodes with the color `inherit` take.
     public var textColor: UIColor? {
-        didSet { invalidateTheme() }
+        didSet { if textColor != oldValue { invalidateTheme() } }
+    }
+
+    /// CSS for the flow, such as `.svelte-flow__node.selected { --xy-node-border: 1px solid red }`.
+    /// See `FlowStyleSheet` for the part of CSS that is read. It sits on top of the theme and below the
+    /// `style` of the flow, of a node, of an edge and of a handle.
+    public var styleSheet: String? {
+        didSet {
+            guard styleSheet != oldValue else { return }
+
+            let parsed = styleSheet.map { FlowStyleSheet($0) }
+            parsedStyleSheet = (parsed?.isEmpty ?? true) ? nil : parsed
+            invalidateTheme()
+        }
+    }
+
+    /// The stylesheet, parsed. `nil` when there is none, or nothing in it.
+    private(set) var parsedStyleSheet: FlowStyleSheet?
+
+    /// The classes of the flow that a stylesheet sees: its own, and the one of its color mode.
+    var styleClasses: Set<String> {
+        flowClasses.union([colorModeClass.rawValue])
     }
 
     /// The font of the text the flow draws itself, such as the labels of edges: it is given a size and a weight.
@@ -406,9 +427,11 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         paneView = PaneView(store: store)
         viewportView = FlowViewportView(store: store)
         edgeLabelRenderer = labelRenderer
-        edgeRenderer = EdgeRenderer(store: store, labelHost: labelRenderer)
+        let renderer = NodeRenderer(store: store)
+        nodeRenderer = renderer
+        // the edges are drawn among the nodes, by their z index
+        edgeRenderer = EdgeRenderer(store: store, labelHost: labelRenderer, layerHost: renderer.layer)
         connectionLineView = ConnectionLineView(store: store)
-        nodeRenderer = NodeRenderer(store: store)
         keyHandler = KeyHandler(store: store)
 
         // the scope is made by the flow, which the views ask for it
@@ -479,6 +502,7 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
 
     private func wireEvents() {
         nodeRenderer.styleScope = { [weak self] in self?.rootScope() ?? FlowStyleScope(properties: FlowTheme.light) }
+        nodeRenderer.styleSheet = { [weak self] in self?.parsedStyleSheet }
         nodeRenderer.onNodeClick = { [weak self] in self?.onNodeClick?($0) }
         nodeRenderer.onNodeMouseEnter = { [weak self] in self?.onNodeMouseEnter?($0) }
         nodeRenderer.onNodeMouseLeave = { [weak self] in self?.onNodeMouseLeave?($0) }
@@ -494,7 +518,11 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         nodeSelectionView.onSelectionClick = { [weak self] in self?.onSelectionClick?($0) }
         nodeSelectionView.onSelectionContextMenu = { [weak self] in self?.onSelectionContextMenu?($0) }
 
+        nodeRenderer.edgeZIndexAt = { [weak self] in self?.edgeRenderer.zIndexOfEdge(at: $0) }
+        nodeRenderer.edgeTarget = { [weak self] in self?.edgeRenderer }
+
         edgeRenderer.styleScope = { [weak self] in self?.rootScope() ?? FlowStyleScope(properties: FlowTheme.light) }
+        edgeRenderer.styleSheet = { [weak self] in self?.parsedStyleSheet }
         edgeRenderer.colorModeClass = { [weak self] in self?.colorModeClass ?? .light }
         edgeRenderer.onEdgeClick = { [weak self] in self?.onEdgeClick?($0) }
         edgeRenderer.onEdgeContextMenu = { [weak self] in self?.onEdgeContextMenu?($0) }
@@ -663,6 +691,12 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         let inherited = (textColor ?? UIColor.label).resolvedColor(with: traitCollection)
         properties["color"] = FlowColor(inherited).cssHex
 
+        if let parsedStyleSheet {
+            for declaration in parsedStyleSheet.declarations(classes: styleClasses) {
+                properties[declaration.name] = declaration.value
+            }
+        }
+
         for (name, value) in styleVariables {
             properties[name] = value
         }
@@ -694,7 +728,7 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
     /// `.svelte-flow { background-color: var(--background-color, var(--background-color-default)) }`
     private func refreshBackground() {
         let scope = rootScope()
-        let inline = FlowCSS.declarationMap(style)
+        let inline = FlowCSS.declarationMap(parsedStyleSheet?.style(classes: styleClasses, inline: style) ?? style)
 
         var color = scope.color(["--background-color", "--background-color-default"])
         if let declared = scope.resolvedColor(inline["background-color"] ?? inline["background"]) {
@@ -956,6 +990,35 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         }
 
         becomeFirstResponder()
+    }
+
+    public override func didMoveToWindow() {
+        super.didMoveToWindow()
+
+        #if canImport(GameController)
+        if window != nil {
+            GlobalKeyboard.shared.add(self)
+        } else {
+            GlobalKeyboard.shared.remove(self)
+            // a key that is let go of while the flow is away is not heard
+            keyHandler.resetKeysAndSelection()
+        }
+        #endif
+    }
+
+    /// A key of a hardware keyboard, when the flow is not the one that has the focus: every flow on
+    /// screen hears them, like the `window` of a page. The flow that has the focus is told by its responder chain.
+    func handleGlobalKey(_ event: FlowKeyEvent, pressed: Bool) {
+        guard window != nil, !isFirstResponder else { return }
+
+        var event = event
+        event.target = window?.flowFirstResponder()
+
+        if pressed {
+            keyHandler.keyDown(event)
+        } else {
+            keyHandler.keyUp(event)
+        }
     }
 
     public override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {

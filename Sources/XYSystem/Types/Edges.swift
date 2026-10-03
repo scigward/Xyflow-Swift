@@ -136,8 +136,11 @@ public final class Edge {
     public var hidden: Bool?
     public var deletable: Bool?
     public var selectable: Bool?
-    /// Arbitrary data passed to an edge.
-    public var data: [String: Any]?
+    /// Arbitrary data passed to an edge. Replacing or changing it bumps `dataRevision`.
+    public var data: [String: Any]? {
+        didSet { dataRevision &+= 1 }
+    }
+    public private(set) var dataRevision: Int = 0
     public var selected: Bool?
     /// Set the marker on the beginning of an edge.
     public var markerStart: EdgeMarkerType?

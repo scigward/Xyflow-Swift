@@ -10,6 +10,7 @@ final class NodeRenderer: FlowPassthroughView {
 
     /// What the nodes read their style from.
     var styleScope: () -> FlowStyleScope = { FlowStyleScope(properties: FlowTheme.light) }
+    var styleSheet: () -> FlowStyleSheet? = { nil }
 
     var nodeClickDistance: Double = 0 {
         didSet {
@@ -18,6 +19,11 @@ final class NodeRenderer: FlowPassthroughView {
             }
         }
     }
+
+    /// What is in front of a node that an edge is above: the z index of the edge at a point of the flow,
+    /// and the view that takes the touch for it.
+    var edgeZIndexAt: ((CGPoint) -> Double?)?
+    var edgeTarget: (() -> UIView?)?
 
     var onNodeClick: ((NodeEvent) -> Void)?
     var onNodeMouseEnter: ((NodeEvent) -> Void)?
@@ -29,6 +35,11 @@ final class NodeRenderer: FlowPassthroughView {
     var onNodeDragStop: ((NodeDragEvent) -> Void)?
 
     private var wrappers: [String: NodeWrapperView] = [:]
+    /// The nodes that went off screen. Their views are kept, so a node that comes back is not built and
+    /// measured again, until there are more of them than `detachedLimit`.
+    private var detached: [String: NodeWrapperView] = [:]
+    private var detachedOrder: [String] = []
+    private let detachedLimit = 256
     private var subscriptions: [Unsubscribe] = []
     private var pendingResizes = OrderedMap<String, InternalNodeUpdate>()
     private var isFlushScheduled = false
@@ -70,6 +81,24 @@ final class NodeRenderer: FlowPassthroughView {
 
     private func nodeTypesChanged() {
         wrappers.values.forEach { $0.nodeTypesDidChange() }
+        detached = [:]
+        detachedOrder = []
+    }
+
+    // MARK: Touches
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let hit = super.hitTest(point, with: event) else { return nil }
+
+        // an edge with a z index above the one of the node is in front of it
+        if let edgeZ = edgeZIndexAt?(point),
+           let wrapper = hit.enclosingNodeWrapper,
+           edgeZ > wrapper.internalNode.internals.z,
+           let target = edgeTarget?() {
+            return target
+        }
+
+        return hit
     }
 
     // MARK: Rendering
@@ -104,6 +133,11 @@ final class NodeRenderer: FlowPassthroughView {
             let wrapper: NodeWrapperView
             if let existing = wrappers[node.id] {
                 wrapper = existing
+            } else if let kept = detached.removeValue(forKey: node.id) {
+                detachedOrder.removeAll { $0 == node.id }
+                addSubview(kept)
+                wrapper = kept
+                wrappers[node.id] = kept
             } else {
                 wrapper = makeWrapper(for: node)
                 wrappers[node.id] = wrapper
@@ -117,6 +151,7 @@ final class NodeRenderer: FlowPassthroughView {
             wrapper.removeFromSuperview()
             wrappers[id] = nil
             pendingResizes.delete(id)
+            keepDetached(wrapper, id: id)
         }
 
         // the nodes are stacked by their z index, and by their order when it is the same
@@ -137,11 +172,29 @@ final class NodeRenderer: FlowPassthroughView {
         }
     }
 
+    private func keepDetached(_ wrapper: NodeWrapperView, id: String) {
+        // a node that is gone from the flow is not kept
+        guard store.nodeLookup.get().get(id) != nil else { return }
+
+        detached[id] = wrapper
+        detachedOrder.removeAll { $0 == id }
+        detachedOrder.append(id)
+
+        while detachedOrder.count > detachedLimit {
+            detached[detachedOrder.removeFirst()] = nil
+        }
+    }
+
     private func makeWrapper(for node: InternalNode) -> NodeWrapperView {
         let wrapper = NodeWrapperView(node: node, store: store)
 
         wrapper.parentScope = { [weak self] in
             self?.styleScope() ?? FlowStyleScope(properties: FlowTheme.light)
+        }
+        wrapper.parentSheet = { [weak self] in self?.styleSheet() }
+        wrapper.parentAncestors = { [weak self] in
+            guard let self else { return [] }
+            return [self.flowClasses] + self.styleAncestors()
         }
         wrapper.nodeClickDistance = nodeClickDistance
         wrapper.onSizeChange = { [weak self] wrapper in self?.sizeChanged(wrapper) }

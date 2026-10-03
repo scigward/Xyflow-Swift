@@ -121,33 +121,64 @@ open class Writable<Value>: Readable<Value> {
 }
 
 /// A store derived from others: it is computed again whenever one of them changes (`derived`).
+///
+/// The stores in `quiet` are the ones that change all the time while the value rarely does, like the
+/// viewport that a list of what is on screen is derived from. When one of them changed the value is
+/// computed, but the subscribers are only told if `isEqual` says that it is another value than before.
 public final class Derived<Value>: Readable<Value> {
     private var unsubscribers: [Unsubscribe] = []
     private let compute: () -> Value
+    private let isEqual: ((Value, Value) -> Bool)?
 
-    public init(_ dependencies: [AnyStore], compute: @escaping () -> Value) {
+    public init(
+        _ dependencies: [AnyStore],
+        quiet quietDependencies: [AnyStore] = [],
+        isEqual: ((Value, Value) -> Bool)? = nil,
+        compute: @escaping () -> Value
+    ) {
         self.compute = compute
+        self.isEqual = isEqual
         super.init(compute())
 
         for dependency in dependencies {
-            var first = true
-            unsubscribers.append(dependency.subscribeAny { [weak self] in
-                if first {
-                    first = false
-                    return
-                }
-                self?.recompute()
-            })
+            follow(dependency, quiet: false)
+        }
+        for dependency in quietDependencies {
+            follow(dependency, quiet: true)
         }
     }
 
-    private func recompute() {
-        assign(compute())
+    private func follow(_ dependency: AnyStore, quiet: Bool) {
+        var first = true
+        unsubscribers.append(dependency.subscribeAny { [weak self] in
+            if first {
+                first = false
+                return
+            }
+            self?.recompute(quiet: quiet)
+        })
+    }
+
+    private func recompute(quiet: Bool) {
+        let value = compute()
+        if quiet, let isEqual, isEqual(storedValue, value) {
+            return
+        }
+        assign(value)
     }
 
     deinit {
         unsubscribers.forEach { $0() }
     }
+}
+
+/// Whether two lists hold the very same objects in the same order.
+func sameObjects<Element: AnyObject>(_ first: [Element], _ second: [Element]) -> Bool {
+    if first.count != second.count { return false }
+    for index in first.indices where first[index] !== second[index] {
+        return false
+    }
+    return true
 }
 
 /// A store with a value that never changes, `readable(value)`.

@@ -124,6 +124,9 @@ public final class BaseEdge {
                 animation.duration = 0.5
                 animation.repeatCount = .infinity
                 animation.timingFunction = CAMediaTimingFunction(name: .linear)
+                // the dashes of every edge on screen are drawn again with each frame, and 30 of them a
+                // second move them smoothly enough
+                animation.preferredFrameRateRange = CAFrameRateRange(minimum: 15, maximum: 30, preferred: 30)
                 pathLayer.add(animation, forKey: "dashdraw")
             }
         } else {
