@@ -144,7 +144,8 @@ final class EdgeAnimationTests: XCTestCase {
             XCTAssertEqual(original.repeatCount, Float.infinity)
             XCTAssertEqual(original.fromValue as? Int, 10)
             XCTAssertEqual(original.toValue as? Int, 0)
-            XCTAssertEqual(original.preferredFrameRateRange.preferred, 0, "no artificial 30fps cap")
+            // An unset range reads back as nil on current SDKs, so nil and 0 both mean no preference.
+            XCTAssertEqual(original.preferredFrameRateRange.preferred ?? 0, 0, "no artificial 30fps cap")
             // A nonzero start time distinguishes keeping the running animation from recreating it.
             original.beginTime = path.convertTime(CACurrentMediaTime(), from: nil) - 0.125
             path.add(original, forKey: "dashdraw")
