@@ -147,11 +147,13 @@ final class EdgeAnimationTests: XCTestCase {
             // An unset range reads back as nil on current SDKs, so nil and 0 both mean no preference.
             XCTAssertEqual(original.preferredFrameRateRange.preferred ?? 0, 0, "no artificial 30fps cap")
             // A nonzero start time distinguishes keeping the running animation from recreating it.
-            original.beginTime = path.convertTime(CACurrentMediaTime(), from: nil) - 0.125
-            path.add(original, forKey: "dashdraw")
+            // A running animation is read-only, so it is changed on a copy.
+            let shifted = try XCTUnwrap(original.copy() as? CABasicAnimation)
+            shifted.beginTime = path.convertTime(CACurrentMediaTime(), from: nil) - 0.125
+            path.add(shifted, forKey: "dashdraw")
             for _ in 0..<20 { flow.edgeRenderer.reconcile() }
             let retained = try XCTUnwrap(path.animation(forKey: "dashdraw"))
-            XCTAssertEqual(retained.beginTime, original.beginTime)
+            XCTAssertEqual(retained.beginTime, shifted.beginTime)
         }
     }
 }
