@@ -1,57 +1,34 @@
 <h1 align="center">Xyflow-Swift</h1>
 
 <p align="center">
-  Node-based graphs for iOS. A Swift and UIKit port of <a href="https://github.com/xyflow/xyflow">xyflow</a>,<br>
-  the library behind React Flow and Svelte Flow.
+  Node-based graphs for iOS.<br>
+  A Swift and UIKit port of <a href="https://github.com/xyflow/xyflow">xyflow</a>, the library behind React Flow and Svelte Flow.
 </p>
 
-<p align="center">
-  <a href="https://github.com/scigward/Xyflow-Swift/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/scigward/Xyflow-Swift/ci.yml?branch=main&amp;style=flat-square&amp;label=CI"></a>
-  <img alt="iOS 16 and later" src="https://img.shields.io/badge/iOS-16%2B-0a84ff?style=flat-square">
-  <img alt="Swift 5.9 and later" src="https://img.shields.io/badge/Swift-5.9%2B-f05138?style=flat-square">
-  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-3b9a5f?style=flat-square"></a>
-</p>
+> [!NOTE]
+> Xyflow-Swift follows `@xyflow/svelte` 0.1.39 and `@xyflow/system` 0.0.59. It needs iOS 16 or later and Swift 5.9 or later. The xyflow team did not make this port. The license is MIT.
 
-<p align="center">
-  <a href="#installation">Installation</a> &middot;
-  <a href="#quick-start">Quick start</a> &middot;
-  <a href="#coming-from-svelte-flow">Coming from Svelte Flow</a> &middot;
-  <a href="#customizing">Customizing</a> &middot;
-  <a href="#plugins">Plugins</a> &middot;
-  <a href="#tests">Tests</a>
-</p>
+Nodes, edges, handles, the store, and key handling work like the web version. So do pan and zoom, dragging, selection, the plugins, and the `--xy-*` style variables. They give the same numbers. The tests compare edge paths, zoom and viewport transforms, handle positions, and node measurements with the original JavaScript packages.
 
----
-
-Xyflow-Swift follows `@xyflow/svelte` 0.1.39 and `@xyflow/system` 0.0.59. Nodes, edges, handles, the store, key
-handling, pan and zoom, dragging, selection, the plugins and the `--xy-*` style variables work the way they do on
-the web, and produce the same numbers. Edge paths, zoom and viewport transforms, handle positions and node
-measurements are compared against the original JavaScript packages in the tests.
-
-If you know Svelte Flow you know this API: the props of `<SvelteFlow>` are properties of `SwiftFlow` (or arguments
-of its initializer), with the same names and the same defaults.
+If you know Svelte Flow, you know this API. The props of `<SvelteFlow>` are properties of `SwiftFlow` (or arguments of its initializer). They have the same names and the same defaults.
 
 ## What is in it
 
-| Area        | What you get                                                                                         |
-| ----------- | ---------------------------------------------------------------------------------------------------- |
-| Nodes       | `input`, `output`, `default` and `group`, or any `UIView` of your own                                |
-| Edges       | `default` (bezier), `straight`, `step` and `smoothstep`, with markers, labels and animation, or an edge of your own that draws into a layer |
-| Interaction | Dragging, connecting, a selection box, multi-select, the delete key, snap to grid and auto pan, from touch, trackpad, mouse or a hardware keyboard |
-| Viewport    | Pan, pinch and double-tap zoom, `fitView`, `setViewport`, zoom and translate extents, animated transitions |
-| Theming     | Light and dark color modes, the `--xy-*` custom properties, style strings on nodes, edges and labels |
-| State       | `Readable`, `Writable` and `Derived` stores that behave like `svelte/store`, and `flow.instance` for `useSvelteFlow()` |
+- Nodes: `input`, `output`, `default` and `group`, or any `UIView` of your own.
+- Edges: `default` (bezier), `straight`, `step` and `smoothstep`, with markers, labels and animation. You can also write an edge that draws into a layer.
+- Interaction: dragging, connecting, a selection box, multi-select, the delete key, snap to grid and auto pan. Input comes from touch, trackpad, mouse or a hardware keyboard.
+- Viewport: pan, pinch and double-tap zoom, `fitView`, `setViewport`, zoom and translate extents, and animated transitions.
+- Theming: light and dark color modes, the `--xy-*` custom properties, and style strings on nodes, edges and labels.
+- State: `Readable`, `Writable` and `Derived` stores that behave like `svelte/store`, and `flow.instance` for `useSvelteFlow()`.
 
-The code is split in two libraries, the way xyflow is split in two packages:
+The code is split in two libraries, as xyflow is split in two packages:
 
-- `Xyflow` is the UIKit part: `SwiftFlow` and its store, the built-in nodes and edges, hooks and plugins. It
-  re-exports `XYSystem`.
-- `XYSystem` is Foundation only: types, geometry, edge paths, the pan and zoom, drag, handle, minimap and resizer
-  controllers, and the d3 behaviors under them. It also builds on macOS and Linux.
+- `Xyflow` is the UIKit part. It has `SwiftFlow` and its store, the built-in nodes and edges, the hooks, and the plugins. It re-exports `XYSystem`.
+- `XYSystem` uses Foundation only. It has the types, the geometry, the edge paths, the pan and zoom, drag, handle, minimap and resizer controllers, and the d3 behaviors under them. It also builds on macOS and Linux.
 
 ## Installation
 
-Add the package in Xcode (File > Add Package Dependencies) with the URL of this repository, or in `Package.swift`:
+Add the package in Xcode (File > Add Package Dependencies) with the URL of this repository. You can also add it to `Package.swift`:
 
 ```swift
 dependencies: [
@@ -67,9 +44,10 @@ targets: [
 ]
 ```
 
-`import Xyflow` is enough, it re-exports the types of `XYSystem`. Depend on the `XYSystem` product instead if you
-only want the core without the views. Releases are tagged and listed under
-[Releases](https://github.com/scigward/Xyflow-Swift/releases).
+> [!TIP]
+> `import Xyflow` is enough, because it re-exports the types of `XYSystem`. If you only need the core without the views, depend on the `XYSystem` product instead.
+
+Releases are tagged and listed under [Releases](https://github.com/scigward/Xyflow-Swift/releases).
 
 ## Quick start
 
@@ -103,7 +81,7 @@ final class GraphViewController: UIViewController {
 }
 ```
 
-The other props are set the same way, and the events are closures:
+You set the other props the same way. The events are closures:
 
 ```swift
 flow.nodesDraggable = false
@@ -114,10 +92,7 @@ flow.onNodeClick = { event in
 }
 ```
 
-`fitView`, `width`, `height`, `viewport`, `initialViewport` and `nodeExtent` are parameters of the initializer. The
-rest, such as `panOnScroll`, `zoomOnScroll`, `onlyRenderVisibleElements`, `selectionKey`, `zoomActivationKey` and
-`defaultEdgeOptions`, are properties. The events are `onNodeClick`, `onEdgeClick`, `onPaneClick`,
-`onNodeDragStop` and so on.
+`fitView`, `width`, `height`, `viewport`, `initialViewport` and `nodeExtent` are parameters of the initializer. All other props are properties, for example `panOnScroll`, `zoomOnScroll`, `onlyRenderVisibleElements`, `selectionKey`, `zoomActivationKey` and `defaultEdgeOptions`. The events are `onNodeClick`, `onEdgeClick`, `onPaneClick`, `onNodeDragStop` and more.
 
 ## Coming from Svelte Flow
 
@@ -143,7 +118,7 @@ rest, such as `panOnScroll`, `zoomOnScroll`, `onlyRenderVisibleElements`, `selec
 
 ### Nodes
 
-A node is a view that is told its props. Handles are `HandleView`s inside of it.
+A node is a view that receives its props. Handles are `HandleView`s inside it.
 
 ```swift
 final class TextNode: UIView, FlowNodeComponent {
@@ -175,11 +150,12 @@ final class TextNode: UIView, FlowNodeComponent {
 flow.nodeTypes = ["text": { TextNode() }]
 ```
 
-A node that does not answer `preferredSize` is sized by its constraints.
+> [!NOTE]
+> If a node does not answer `preferredSize`, its constraints set its size.
 
 ### Edges
 
-The edges that ship with the flow are paths that `PathEdgeComponent` draws. Subclass it and return the path:
+The built-in edges are paths that `PathEdgeComponent` draws. To change one, subclass `PathEdgeComponent` and return the path:
 
 ```swift
 final class RoundedStepEdge: PathEdgeComponent {
@@ -194,16 +170,13 @@ final class RoundedStepEdge: PathEdgeComponent {
 flow.edgeTypes = ["rounded": { RoundedStepEdge() }]
 ```
 
-For an edge that is not a single path, implement `FlowEdgeComponent`: it provides a layer to draw in and the
-views of its labels.
+For an edge that is not a single path, implement `FlowEdgeComponent`. It provides a layer to draw in and the views of its labels.
 
 ### Styles
 
-The style of a flow is the set of custom properties of its root scope (`flow.rootScope()`): the theme of its
-color mode, then `flow.styleSheet`, then `flow.styleVariables`, then the declarations of `flow.style`, each
-overriding the one before. Nodes, edges and plugins resolve their colors against it. Style strings work the way
-they do on the web: `Node.style`, `Edge.style`, `Edge.labelStyle` and `HandleView.style` take declarations, and
-`var()` finds the variables. All the `--xy-*` properties of the default theme are there, light and dark.
+The style of a flow is the set of custom properties of its root scope (`flow.rootScope()`). Each of these overrides the one before it: the theme of the color mode, `flow.styleSheet`, `flow.styleVariables`, and the declarations of `flow.style`. Nodes, edges, and plugins resolve their colors against this scope.
+
+Style strings work like they do on the web. `Node.style`, `Edge.style`, `Edge.labelStyle` and `HandleView.style` take declarations, and `var()` finds the variables. The scope has all the `--xy-*` properties of the default theme, light and dark.
 
 ```swift
 flow.styleVariables = ["--accent": "#0059dc"]
@@ -213,7 +186,7 @@ edge.style = "--xy-edge-stroke: var(--accent)"
 edge.labelStyle = "--xy-edge-label-color: var(--accent)"
 ```
 
-`flow.styleSheet` takes CSS, for the nodes, edges and handles that share a look:
+`flow.styleSheet` takes CSS. Use it for nodes, edges, and handles that share a look:
 
 ```swift
 flow.styleSheet = """
@@ -224,11 +197,10 @@ flow.styleSheet = """
 """
 ```
 
-Only a part of CSS is read. A selector is a list of chains of classes (`.a.b`), or `*`, joined by a space or
-`>`; ids, tags, attributes and pseudo classes such as `:hover` never match, and at-rules like `@media` are
-skipped. A declaration is read the way it is in a style string, and one in a stylesheet loses against the style
-of the node, edge or handle itself. The classes are the ones of Svelte Flow (`swift-flow__node` is the same class
-as `svelte-flow__node`):
+> [!NOTE]
+> Xyflow-Swift reads only a part of CSS. A selector is a list of chains of classes (`.a.b`) or `*`, joined by a space or `>`. Ids, tags, attributes, and pseudo classes such as `:hover` never match. At-rules such as `@media` are skipped. A declaration is read like a declaration in a style string. A declaration in a stylesheet loses against the style of the node, edge, or handle itself.
+
+The classes are the ones of Svelte Flow. `swift-flow__node` is the same class as `svelte-flow__node`.
 
 | Element | Classes |
 | ------- | ------- |
@@ -240,11 +212,9 @@ as `svelte-flow__node`):
 
 ## Reading and changing the flow
 
-`flow.instance` is `useSvelteFlow()`: `fitView`, `zoomIn`, `zoomOut`, `setViewport`, `getNodes`,
-`screenToFlowPosition`, `getIntersectingNodes`, `updateNodeData`, `deleteElements` and the rest. Where the web
-version returns a promise, the function takes a completion handler, or can be awaited. The stores behind the hooks
-(`nodes`, `edges`, `viewport`, `connection` and so on) are `Readable` and `Writable` objects with the semantics of
-`svelte/store`.
+`flow.instance` is `useSvelteFlow()`. It has `fitView`, `zoomIn`, `zoomOut`, `setViewport`, `getNodes`, `screenToFlowPosition`, `getIntersectingNodes`, `updateNodeData`, `deleteElements` and more. Where the web version returns a promise, the function takes a completion handler, or you can `await` it.
+
+The stores behind the hooks are `Readable` and `Writable` objects with the semantics of `svelte/store`. Examples are `nodes`, `edges`, `viewport` and `connection`.
 
 ```swift
 flow.instance.fitView()
@@ -257,7 +227,7 @@ let deleted = await flow.instance.deleteElements(nodes: ["2"])
 flow.nodes.update { $0 + [Node(id: "3", position: XYPosition(x: 400, y: 0))] }
 ```
 
-To have the state before the view, which is what `SvelteFlowProvider` is for, make the store first:
+To have the state before the view (the job of `SvelteFlowProvider`), make the store first:
 
 ```swift
 let store = SwiftFlowStore()
@@ -267,7 +237,7 @@ let flow = SwiftFlow(store: store)
 
 ## Input
 
-A touch is routed the way the events of a page bubble, from the view it started on up through the views around it:
+A touch goes the way the events of a page bubble: from the view it started on, up through the views around it.
 
 | Input                                   | What happens                                                      |
 | --------------------------------------- | ----------------------------------------------------------------- |
@@ -280,10 +250,10 @@ A touch is routed the way the events of a page bubble, from the view it started 
 | Secondary button                        | Calls `onNodeContextMenu`, `onEdgeContextMenu`, `onPaneContextMenu` and the like |
 | Hardware keyboard                       | `selectionKey`, `multiSelectionKey`, `deleteKey`, `panActivationKey` and `zoomActivationKey` |
 
-A view with one of the classes `nodrag`, `nopan`, `nowheel` or `nokey` in `flowClasses` opts out of that input.
+> [!NOTE]
+> A view with the class `nodrag`, `nopan`, `nowheel` or `nokey` in `flowClasses` opts out of that input.
 
-The keys of a hardware keyboard reach every flow that is on screen, like the keys that a page listens to on
-`window`, so a flow does not have to be touched first. A text field that has the focus keeps its keys.
+A hardware keyboard reaches every flow on screen, like the keys that a page listens to on `window`. You do not have to touch a flow first. A text field that has the focus keeps its keys.
 
 ## Plugins
 
@@ -296,8 +266,7 @@ The keys of a hardware keyboard reach every flow that is on screen, like the key
 | `NodeToolbarView` | A toolbar that sits at one or more nodes                                    |
 | `FlowPanelView`   | A view pinned to a side or a corner of the flow                             |
 
-They are added with `flow.add(_:)`. `flow.viewportPortal` is a view that moves with the viewport, for anything
-else that belongs to the coordinates of the flow.
+Add them with `flow.add(_:)`. `flow.viewportPortal` is a view that moves with the viewport. Use it for anything else that belongs to the coordinates of the flow.
 
 ```swift
 flow.add(BackgroundView(variant: .lines, gap: 24))
@@ -310,37 +279,28 @@ flow.add(controls)
 
 ## Differences from the web version
 
-- A viewport change that the user cuts short (by touching the flow during a `fitView`, say) answers `false` to
-  `await`, where the promise of the web version stays open.
-- Stylesheets read a part of CSS, see [Styles](#styles).
-- An edge and its label are drawn in front of the nodes with a lower `zIndex` than their own, and behind the
-  others. At the default `zIndex`, both stay behind the nodes.
-- Key events come from GameController when the flow does not have the focus, so only a hardware keyboard sends
-  them, and the modifier keys that are held are the ones of that keyboard.
+- If the user cuts a viewport change short (for example by touching the flow during a `fitView`), `await` returns `false`. The promise of the web version stays open.
+- Stylesheets read a part of CSS. See [Styles](#styles).
+- An edge and its label are drawn in front of the nodes with a lower `zIndex` than their own, and behind the other nodes. At the default `zIndex`, both stay behind the nodes.
+- When the flow does not have the focus, key events come from GameController. Only a hardware keyboard sends them, and the held modifier keys are the ones of that keyboard.
 
 ## Big graphs
 
-`onlyRenderVisibleElements` keeps the views of the nodes and edges that are off screen out of the flow, which is
-what to set for a graph of a few hundred nodes. What the flow does to stay fast while it is panned and zoomed:
+> [!TIP]
+> Set `onlyRenderVisibleElements` for a graph of a few hundred nodes. It keeps the views of nodes and edges that are off screen out of the flow.
 
-- The list of the nodes and edges on screen is only passed on when it is another list than before, so panning
-  over the same nodes does not touch any view.
-- A node, an edge or a handle is only drawn again when something it is drawn from changed, which is its values,
-  the style of the flow or its stylesheet.
-- The views of nodes and edges that left the screen are kept for when they come back.
-- The pattern of the background is drawn once and moved, and is drawn again for another zoom.
-- Changes to edge geometry are not implicitly animated. Animated dashes follow the web's half-second linear
-  loop, without an artificial frame-rate cap, and resume when a cached edge returns to the layer tree.
-- Selection and deletion use local ID sets for membership checks, while preserving traversal order, object
-  semantics and store notifications.
-- Edge styles are parsed once per update. The stroked hit-test path is reused until its geometry or effective
-  width changes.
-- Nodes and edges that already arrive in stacking order use a linear pass instead of sorting, preserving
-  source-order ties and checking the current mutable z values on every reconciliation.
+The flow does these things to stay fast while you pan and zoom:
+
+- If the list of nodes and edges on screen is the same list, the flow does not pass it on. Panning over the same nodes does not touch any view.
+- If none of the values that a node, an edge, or a handle is drawn from changes, the flow does not draw it again. These values are its own values, the style of the flow, and its stylesheet.
+- The flow keeps the views of nodes and edges that left the screen, ready for their return.
+- The flow draws the background pattern once and moves it. It draws the pattern again for another zoom.
+- The flow does not animate changes to edge geometry implicitly. Animated dashes follow the half-second linear loop of the web, without a frame-rate cap. When a cached edge returns to the layer tree, its dashes resume.
+- Selection, deletion, edge style parsing, and the order of nodes and edges that already arrive in stacking order avoid repeated work.
 
 ## Layout of the repository
 
-The folders follow the ones of xyflow, which makes a port easy to compare with its original.
+The folders follow the ones of xyflow, so you can compare the port with the original.
 
 ```
 Sources/
@@ -362,19 +322,16 @@ Tests/
 
 ## Tests
 
-`swift test --filter XYSystemTests` runs the tests of the core, on macOS and on Linux. Most of their expected
-values are not written by hand: they were produced by running the same inputs, many of them random, through the
-original `@xyflow/system` and `d3` packages. That covers edge paths, viewport and zoom transforms, handle and edge
-positions, resizing, node measuring and the graph helpers. The tests of the UIKit part run on the iOS simulator:
+`swift test --filter XYSystemTests` runs the core tests on macOS and Linux. Most expected values were not written by hand. They come from running the same inputs through the original `@xyflow/system` and `d3` packages, and many of the inputs are random. This covers edge paths, viewport and zoom transforms, handle and edge positions, resizing, node measuring, and the graph helpers.
+
+The tests of the UIKit part run on the iOS simulator:
 
 ```
 xcodebuild test -scheme Xyflow-Package -destination 'platform=iOS Simulator,name=<a simulator you have>'
 ```
 
-CI runs the core tests on macOS and the whole suite on an iOS simulator for every push to `main` and every pull
-request.
+CI runs the core tests on macOS and the whole suite on an iOS simulator for every push to `main` and every pull request.
 
 ## License
 
-MIT, as xyflow is. See [LICENSE](LICENSE), which keeps the copyright of the xyflow authors, and
-[NOTICE](NOTICE) for the d3 code the behaviors are based on.
+MIT, like xyflow. See [LICENSE](LICENSE), which keeps the copyright of the xyflow authors, and [NOTICE](NOTICE) for the d3 code that the behaviors are based on.
