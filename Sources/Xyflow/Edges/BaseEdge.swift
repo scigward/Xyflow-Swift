@@ -286,7 +286,8 @@ public final class BaseEdge {
             y: labelY ?? 0,
             style: props.labelStyle,
             scope: context.styleScope,
-            font: context.font)
+            font: context.font,
+            lineHeight: context.lineHeight)
     }
 
     // MARK: Hit testing

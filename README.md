@@ -6,7 +6,7 @@
 </p>
 
 > [!NOTE]
-> Xyflow-Swift follows `@xyflow/svelte` 0.1.39 and `@xyflow/system` 0.0.59. It needs iOS 16 or later and Swift 5.9 or later. The xyflow team did not make this port. The license is MIT.
+> Xyflow-Swift follows `@xyflow/svelte` 0.1.39 and `@xyflow/system` 0.0.59. Its style sheet and drawing follow `@xyflow/svelte` 1.7.1. It needs iOS 16 or later and Swift 5.9 or later. The xyflow team did not make this port. The license is MIT.
 
 Nodes, edges, handles, the store, and key handling work like the web version. So do pan and zoom, dragging, selection, the plugins, and the `--xy-*` style variables. They give the same numbers. The tests compare edge paths, zoom and viewport transforms, handle positions, and node measurements with the original JavaScript packages.
 

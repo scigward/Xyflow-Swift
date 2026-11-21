@@ -359,10 +359,10 @@ public final class ControlsView: FlowPanelView {
 
         flowClasses = ["svelte-flow__panel", "svelte-flow__controls"]
 
-        zoomInButton.accessibilityLabel = "zoom in"
-        zoomOutButton.accessibilityLabel = "zoom out"
-        fitViewButton.accessibilityLabel = "fit view"
-        lockButton.accessibilityLabel = "toggle interactivity"
+        zoomInButton.accessibilityLabel = "Zoom In"
+        zoomOutButton.accessibilityLabel = "Zoom Out"
+        fitViewButton.accessibilityLabel = "Fit View"
+        lockButton.accessibilityLabel = "Toggle Interactivity"
 
         zoomInButton.onClick = { [weak self] in self?.flow?.store.zoomIn() }
         zoomOutButton.onClick = { [weak self] in self?.flow?.store.zoomOut() }

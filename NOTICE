@@ -1,6 +1,6 @@
 Xyflow-Swift is a port of xyflow (https://github.com/xyflow/xyflow), the packages
-@xyflow/system 0.0.59 and @xyflow/svelte 0.1.39, which is released under the MIT
-license (see LICENSE).
+@xyflow/system 0.0.59 and @xyflow/svelte 0.1.39, and the style sheet and drawing of
+@xyflow/svelte 1.7.1, which are released under the MIT license (see LICENSE).
 
 The pan, zoom, drag, transition and interpolation behavior of the flow follows
 the following packages of d3, which are ported as well:

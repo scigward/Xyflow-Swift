@@ -139,6 +139,8 @@ public struct EdgeRenderContext {
     public var selectEdge: (String) -> Void
     /// The font of the text of the flow, for a size and a weight.
     public var font: (CGFloat, UIFont.Weight) -> UIFont
+    /// The `line-height` the text of the flow inherits, for a font size. `nil` is the height of the font.
+    public var lineHeight: (CGFloat) -> CGFloat?
     /// The stylesheet of the flow, and the classes of the views the edges and their labels are among.
     public var styleSheet: FlowStyleSheet?
     public var edgeAncestors: [Set<String>]
@@ -151,6 +153,7 @@ public struct EdgeRenderContext {
         theme: ColorModeClass,
         selectEdge: @escaping (String) -> Void = { _ in },
         font: @escaping (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) },
+        lineHeight: @escaping (CGFloat) -> CGFloat? = { _ in nil },
         styleSheet: FlowStyleSheet? = nil,
         edgeAncestors: [Set<String>] = [],
         labelAncestors: [Set<String>] = []
@@ -161,6 +164,7 @@ public struct EdgeRenderContext {
         self.theme = theme
         self.selectEdge = selectEdge
         self.font = font
+        self.lineHeight = lineHeight
         self.styleSheet = styleSheet
         self.edgeAncestors = edgeAncestors
         self.labelAncestors = labelAncestors

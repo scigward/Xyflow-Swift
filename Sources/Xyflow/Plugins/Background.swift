@@ -23,10 +23,16 @@ public final class BackgroundView: FlowPluginView {
         didSet { setNeedsLayout() }
     }
 
-    /// The size of a single pattern element.
-    public var size: Double = 1 {
-        didSet { setNeedsLayout() }
+    /// The size of a single pattern element. Without one it is 1, and 6 for the cross.
+    public var size: Double {
+        get { explicitSize ?? (variant == .cross ? 6 : 1) }
+        set {
+            explicitSize = newValue
+            setNeedsLayout()
+        }
     }
+
+    private var explicitSize: Double?
 
     /// The width of the lines of the lines pattern.
     public var lineWidth: Double = 1 {
@@ -71,14 +77,14 @@ public final class BackgroundView: FlowPluginView {
     public init(
         variant: BackgroundVariant = .dots,
         gap: Double = 20,
-        size: Double = 1,
+        size: Double? = nil,
         lineWidth: Double = 1,
         bgColor: String? = nil,
         patternColor: String? = nil
     ) {
         self.variant = variant
         self.gap = (gap, gap)
-        self.size = size
+        explicitSize = size
         self.lineWidth = lineWidth
         self.bgColor = bgColor
         self.patternColor = patternColor
@@ -133,7 +139,7 @@ public final class BackgroundView: FlowPluginView {
         let scope = FlowStyleScope(parent: flow.rootScope(), properties: properties)
 
         backgroundColor = scope.color([
-            "--xy-background-color", "--xy-background-color-props", "--xy-background-color-default"
+            "--xy-background-color-props", "--xy-background-color", "--xy-background-color-default"
         ])?.uiColor ?? .clear
 
         patternUIColor = scope.color([
@@ -218,8 +224,7 @@ public final class BackgroundView: FlowPluginView {
         zoom: Double,
         scale: CGFloat
     ) -> CGImage? {
-        let patternSize = size == 0 ? 1 : size
-        let scaledSize = patternSize * zoom
+        let scaledSize = size * zoom
 
         let format = UIGraphicsImageRendererFormat()
         format.scale = scale

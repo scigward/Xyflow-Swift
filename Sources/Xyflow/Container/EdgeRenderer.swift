@@ -206,6 +206,9 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
     var font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) } {
         didSet { contextVersion += 1 }
     }
+    var lineHeight: (CGFloat) -> CGFloat? = { _ in nil } {
+        didSet { contextVersion += 1 }
+    }
 
     var styleSheet: () -> FlowStyleSheet? = { nil }
 
@@ -302,6 +305,7 @@ final class EdgeRenderer: FlowPassthroughView, FlowClickable, FlowHoverable, Flo
             theme: colorModeClass(),
             selectEdge: { [weak store] id in store?.handleEdgeSelect(id) },
             font: font,
+            lineHeight: lineHeight,
             styleSheet: sheet,
             edgeAncestors: sheet == nil ? [] : [flowClasses] + styleAncestors(),
             labelAncestors: sheet == nil ? [] : labelHost.map { [$0.flowClasses] + $0.styleAncestors() } ?? [])

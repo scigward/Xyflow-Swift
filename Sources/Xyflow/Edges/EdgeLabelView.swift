@@ -13,7 +13,7 @@ public final class EdgeLabelView: UIView, FlowClickable {
     public override init(frame: CGRect) {
         super.init(frame: frame)
 
-        // EdgeLabel.svelte 0.1.39 keeps labels clickable but does not suppress canvas gestures.
+        // EdgeLabel.svelte 1.7.1 keeps labels clickable but does not suppress canvas gestures.
         flowClasses = ["svelte-flow__edge-label"]
         textLabel.font = .systemFont(ofSize: 10)
         textLabel.textAlignment = .center
@@ -33,7 +33,8 @@ public final class EdgeLabelView: UIView, FlowClickable {
         y: Double,
         style: String?,
         scope: FlowStyleScope,
-        font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) }
+        font: (CGFloat, UIFont.Weight) -> UIFont = { UIFont.systemFont(ofSize: $0, weight: $1) },
+        lineHeight: (CGFloat) -> CGFloat? = { _ in nil }
     ) {
         let inline = FlowCSS.declarationMap(style)
         let labelScope = FlowStyleScope(parent: scope, properties: inline)
@@ -60,13 +61,34 @@ public final class EdgeLabelView: UIView, FlowClickable {
             }
         }()
 
-        textLabel.font = font(CGFloat(fontSize), weight)
-        textLabel.text = text
-        textLabel.textColor = (color ?? labelScope.inheritedColor()).map { $0.uiColor } ?? .label
+        let labelFont = font(CGFloat(fontSize), weight)
+        let textColor = (color ?? labelScope.inheritedColor()).map { $0.uiColor } ?? .label
         backgroundColor = background?.uiColor ?? .clear
 
+        // the label inherits the `line-height` of the page, and the glyphs sit in the middle of the line box
+        let boxHeight = lineHeight(CGFloat(fontSize))
+        if let boxHeight {
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .center
+            paragraph.minimumLineHeight = boxHeight
+            paragraph.maximumLineHeight = boxHeight
+            textLabel.attributedText = NSAttributedString(string: text, attributes: [
+                .font: labelFont,
+                .foregroundColor: textColor,
+                .paragraphStyle: paragraph,
+                .baselineOffset: (boxHeight - labelFont.lineHeight) / 2
+            ])
+        } else {
+            textLabel.attributedText = nil
+            textLabel.font = labelFont
+            textLabel.text = text
+            textLabel.textColor = textColor
+        }
+
         let fitted = textLabel.sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude))
-        let size = CGSize(width: ceil(fitted.width) + padding * 2, height: ceil(fitted.height) + padding * 2)
+        let size = CGSize(
+            width: ceil(fitted.width) + padding * 2,
+            height: (boxHeight ?? ceil(fitted.height)) + padding * 2)
 
         // `transform: translate(-50%, -50%) translate(x, y)`: the middle of the box is on the point
         bounds = CGRect(origin: .zero, size: size)

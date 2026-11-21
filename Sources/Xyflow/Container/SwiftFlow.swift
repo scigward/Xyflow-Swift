@@ -388,6 +388,14 @@ public final class SwiftFlow: UIView, FlowDomNode, FlowDocument, UIGestureRecogn
         }
     }
 
+    /// The `line-height` of the text the flow draws itself, for a font size. Without one, a line is as high as the font.
+    public var lineHeightProvider: ((CGFloat) -> CGFloat?)? {
+        didSet {
+            edgeRenderer.lineHeight = lineHeightProvider ?? { _ in nil }
+            edgeRenderer.reconcile()
+        }
+    }
+
     private var cachedScope: FlowStyleScope?
 
     // MARK: Init
